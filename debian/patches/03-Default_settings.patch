@@ -17,7 +17,7 @@ Description: Set defaults that make sense for Debian systems.
  
  const (
 -	defIgnoredMountPoints = "^/(dev|proc|sys|var/lib/docker)($|/)"
-+	defIgnoredMountPoints = "^/(dev|proc|run|sys|var/lib/docker)($|/)"
++	defIgnoredMountPoints = "^/(dev|proc|run|sys|mnt|media|var/lib/docker)($|/)"
  	defIgnoredFSTypes     = "^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs)$"
  	readOnly              = 0x1 // ST_RDONLY
  )
