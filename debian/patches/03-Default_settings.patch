@@ -42,6 +42,15 @@ Index: prometheus-node-exporter/collector/systemd_linux.go
 ===================================================================
 --- prometheus-node-exporter.orig/collector/systemd_linux.go
 +++ prometheus-node-exporter/collector/systemd_linux.go
+@@ -28,7 +28,7 @@ import (
+ 
+ var (
+ 	unitWhitelist  = kingpin.Flag("collector.systemd.unit-whitelist", "Regexp of systemd units to whitelist. Units must both match whitelist and not match blacklist to be included.").Default(".+").String()
+-	unitBlacklist  = kingpin.Flag("collector.systemd.unit-blacklist", "Regexp of systemd units to blacklist. Units must both match whitelist and not match blacklist to be included.").Default(".+\\.scope").String()
++	unitBlacklist  = kingpin.Flag("collector.systemd.unit-blacklist", "Regexp of systemd units to blacklist. Units must both match whitelist and not match blacklist to be included.").Default(".+(\\.device|\\.scope|\\.slice|\\.target)").String()
+ 	systemdPrivate = kingpin.Flag("collector.systemd.private", "Establish a private, direct connection to systemd without dbus.").Bool()
+ )
+ 
 @@ -44,7 +44,7 @@ type systemdCollector struct {
  var unitStatesName = []string{"active", "activating", "deactivating", "inactive", "failed"}
  
