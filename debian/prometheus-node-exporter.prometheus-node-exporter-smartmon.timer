@@ -1,5 +1,6 @@
 [Unit]
 Description=Run smart metrics collection every 15 minutes
+ConditionPathExists=/usr/sbin/smartctl
 ConditionPathExistsGlob=|/dev/sd*
 ConditionPathExistsGlob=|/dev/hd*
 # TODO: Figure out if NVMe returns usable metrics through smartmon.sh.

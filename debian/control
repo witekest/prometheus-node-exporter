@@ -29,6 +29,7 @@ Depends: daemon | systemd-sysv,
          moreutils,
          ${misc:Depends},
          ${shlibs:Depends},
+Recommends: smartmontools
 Built-Using: ${misc:Built-Using},
 Description: Prometheus exporter for machine metrics
  Prometheus exporter for machine metrics, written in Go with pluggable metric
