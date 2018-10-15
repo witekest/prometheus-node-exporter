@@ -8,7 +8,7 @@ ARGS=""
 #
 #  --collector.diskstats.ignored-devices="^(ram|loop|fd|(h|s|v|xv)d[a-z]|nvme\\d+n\\d+p)\\d+$"
 #                            Regexp of devices to ignore for diskstats.
-#  --collector.filesystem.ignored-mount-points="^/(dev|proc|run|sys|var/lib/docker)($|/)"
+#  --collector.filesystem.ignored-mount-points="^/(dev|proc|run|sys|mnt|media|var/lib/docker)($|/)"
 #                            Regexp of mount points to ignore for filesystem
 #                            collector.
 #  --collector.filesystem.ignored-fs-types="^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs)$"
@@ -46,7 +46,7 @@ ARGS=""
 #                            Regexp of systemd units to whitelist. Units must
 #                            both match whitelist and not match blacklist to
 #                            be included.
-#  --collector.systemd.unit-blacklist=".+\\.scope"
+#  --collector.systemd.unit-blacklist=".+(\\.device|\\.scope|\\.slice|\\.target)"
 #                            Regexp of systemd units to blacklist. Units must
 #                            both match whitelist and not match blacklist to
 #                            be included.
@@ -102,8 +102,7 @@ ARGS=""
 #  --collector.stat          Enable the stat collector (default: enabled).
 #  --collector.supervisord   Enable the supervisord collector (default:
 #                            disabled).
-#  --collector.systemd       Enable the systemd collector (default:
-#                            disabled).
+#  --collector.systemd       Enable the systemd collector (default: enabled).
 #  --collector.tcpstat       Enable the tcpstat collector (default:
 #                            disabled).
 #  --collector.textfile      Enable the textfile collector (default:
