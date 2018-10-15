@@ -52,4 +52,12 @@ override_dh_auto_test:
             -x -f collector/fixtures/sys.ttar
 	dh_auto_test -- $(BUILDFLAGS)
 
+override_dh_installsystemd:
+	dh_installsystemd
+	dh_installsystemd --name=prometheus-node-exporter-smartmon \
+		prometheus-node-exporter-smartmon.timer
+	dh_installsystemd --name==prometheus-node-exporter-smartmon \
+		--no-start \
+		prometheus-node-exporter-smartmon.service
+
 override_dh_auto_install:

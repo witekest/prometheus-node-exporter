@@ -1,2 +1,3 @@
 build/bin/prometheus-node-exporter usr/bin
 debian/README.textfile var/lib/prometheus/node-exporter
+text_collector_examples/* usr/share/prometheus-node-exporter
