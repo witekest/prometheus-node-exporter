@@ -48,9 +48,11 @@ override_dh_auto_build:
 	sed -i 's/\\fB--\(.*\)=".*"\\fR/\\fB--\1\\fR/' build/$(BINNAME).1
 
 override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 	$(CURDIR)/ttar -C $(BUILDDIR)/src/$(DH_GOPKG)/collector/fixtures \
             -x -f collector/fixtures/sys.ttar
 	dh_auto_test -- $(BUILDFLAGS)
+endif
 
 override_dh_installsystemd:
 	dh_installsystemd
