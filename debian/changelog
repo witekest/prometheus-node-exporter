@@ -1,4 +1,4 @@
-prometheus-node-exporter (0.16.0+ds-2) UNRELEASED; urgency=medium
+prometheus-node-exporter (0.16.0+ds-2) unstable; urgency=medium
 
   [ Philipp Kern ]
   * Add a stricter dependency on golang-github-prometheus-client-golang-
@@ -21,7 +21,7 @@ prometheus-node-exporter (0.16.0+ds-2) UNRELEASED; urgency=medium
   * debian/rules: Check DEB_BUILD_OPTIONS before running tests.
   * Update Standards-Version with no changes.
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 15 Oct 2018 15:52:10 +0000
+ -- Martín Ferrari <tincho@debian.org>  Mon, 15 Oct 2018 16:25:37 +0000
 
 prometheus-node-exporter (0.16.0+ds-1) unstable; urgency=medium
 
