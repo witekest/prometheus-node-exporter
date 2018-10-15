@@ -61,5 +61,10 @@ override_dh_installsystemd:
 	dh_installsystemd --name==prometheus-node-exporter-smartmon \
 		--no-start \
 		prometheus-node-exporter-smartmon.service
+	dh_installsystemd --name=prometheus-node-exporter-apt \
+		prometheus-node-exporter-apt.timer
+	dh_installsystemd --name=prometheus-node-exporter-apt \
+		--no-start \
+		prometheus-node-exporter-apt.service
 
 override_dh_auto_install:
