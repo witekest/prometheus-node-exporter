@@ -20,6 +20,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -53,14 +54,22 @@ func NewInfiniBandCollector() (Collector, error) {
 
 	// Filenames of all InfiniBand counter metrics including a detailed description.
 	i.counters = map[string]infinibandMetric{
-		"link_downed_total":                   {"link_downed", "Number of times the link failed to recover from an error state and went down"},
-		"link_error_recovery_total":           {"link_error_recovery", "Number of times the link successfully recovered from an error state"},
-		"multicast_packets_received_total":    {"multicast_rcv_packets", "Number of multicast packets received (including errors)"},
-		"multicast_packets_transmitted_total": {"multicast_xmit_packets", "Number of multicast packets transmitted (including errors)"},
-		"port_data_received_bytes_total":      {"port_rcv_data", "Number of data octets received on all links"},
-		"port_data_transmitted_bytes_total":   {"port_xmit_data", "Number of data octets transmitted on all links"},
-		"unicast_packets_received_total":      {"unicast_rcv_packets", "Number of unicast packets received (including errors)"},
-		"unicast_packets_transmitted_total":   {"unicast_xmit_packets", "Number of unicast packets transmitted (including errors)"},
+		"link_downed_total":                        {"link_downed", "Number of times the link failed to recover from an error state and went down"},
+		"link_error_recovery_total":                {"link_error_recovery", "Number of times the link successfully recovered from an error state"},
+		"multicast_packets_received_total":         {"multicast_rcv_packets", "Number of multicast packets received (including errors)"},
+		"multicast_packets_transmitted_total":      {"multicast_xmit_packets", "Number of multicast packets transmitted (including errors)"},
+		"port_constraint_errors_received_total":    {"port_rcv_constraint_errors", "Number of packets received on the switch physical port that are discarded"},
+		"port_constraint_errors_transmitted_total": {"port_xmit_constraint_errors", "Number of packets not transmitted from the switch physical port"},
+		"port_data_received_bytes_total":           {"port_rcv_data", "Number of data octets received on all links"},
+		"port_data_transmitted_bytes_total":        {"port_xmit_data", "Number of data octets transmitted on all links"},
+		"port_discards_received_total":             {"port_rcv_discards", "Number of inbound packets discarded by the port because the port is down or congested"},
+		"port_discards_transmitted_total":          {"port_xmit_discards", "Number of outbound packets discarded by the port because the port is down or congested"},
+		"port_errors_received_total":               {"port_rcv_errors", "Number of packets containing an error that were received on this port"},
+		"port_packets_received_total":              {"port_rcv_packets", "Number of packets received on all VLs by this port (including errors)"},
+		"port_packets_transmitted_total":           {"port_xmit_packets", "Number of packets transmitted on all VLs from this port (including errors)"},
+		"port_transmit_wait_total":                 {"port_xmit_wait", "Number of ticks during which the port had data to transmit but no data was sent during the entire tick"},
+		"unicast_packets_received_total":           {"unicast_rcv_packets", "Number of unicast packets received (including errors)"},
+		"unicast_packets_transmitted_total":        {"unicast_xmit_packets", "Number of unicast packets transmitted (including errors)"},
 	}
 
 	// Deprecated counters for some older versions of InfiniBand drivers.
@@ -144,6 +153,15 @@ func infinibandPorts(infinibandPath, device string) ([]string, error) {
 func readMetric(directory, metricFile string) (uint64, error) {
 	metric, err := readUintFromFile(filepath.Join(directory, metricFile))
 	if err != nil {
+		// Ugly workaround for handling #966, when counters are
+		// `N/A (not available)`.
+		// This was already patched and submitted, see
+		// https://www.spinics.net/lists/linux-rdma/msg68596.html
+		// Remove this as soon as the fix lands in the enterprise distros.
+		if strings.Contains(err.Error(), "N/A (no PMA)") {
+			log.Debugf("%q value is N/A", metricFile)
+			return 0, nil
+		}
 		log.Debugf("Error reading %q file", metricFile)
 		return 0, err
 	}
