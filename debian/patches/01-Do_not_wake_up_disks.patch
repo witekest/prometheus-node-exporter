@@ -1,0 +1,25 @@
+Description: Avoid spinning-up disks unnecessarily.
+
+--- a/text_collector_examples/smartmon.sh
++++ b/text_collector_examples/smartmon.sh
+@@ -162,17 +162,17 @@
+   exit
+ fi
+ 
+-device_list="$(/usr/sbin/smartctl --scan-open | awk '/^\/dev/{print $1 "|" $3}')"
++device_list="$(/usr/sbin/smartctl --scan-open --nocheck=standby | awk '/^\/dev/{print $1 "|" $3}')"
+ 
+ for device in ${device_list}; do
+   disk="$(echo ${device} | cut -f1 -d'|')"
+   type="$(echo ${device} | cut -f2 -d'|')"
+   echo "smartctl_run{disk=\"${disk}\",type=\"${type}\"}" "$(TZ=UTC date '+%s')"
+   # Get the SMART information and health
+-  /usr/sbin/smartctl -i -H -d "${type}" "${disk}" | parse_smartctl_info "${disk}" "${type}"
++  /usr/sbin/smartctl -i -H -d "${type}" --nocheck=standby "${disk}" | parse_smartctl_info "${disk}" "${type}"
+   # Get the SMART attributes
+   case ${type} in
+-  sat) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_attributes "${disk}" "${type}" ;;
++  sat) /usr/sbin/smartctl -A -d "${type}" --nocheck=standby "${disk}" | parse_smartctl_attributes "${disk}" "${type}" ;;
+   sat+megaraid*) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_attributes "${disk}" "${type}" ;;
+   scsi) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_scsi_attributes "${disk}" "${type}" ;;
+   megaraid*) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_scsi_attributes "${disk}" "${type}" ;;
