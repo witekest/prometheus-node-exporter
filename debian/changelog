@@ -1,3 +1,17 @@
+prometheus-node-exporter (0.17.0+ds-1) UNRELEASED; urgency=medium
+
+  [ Philipp Kern ]
+  * Ship a systemd service for the apt text collector. apt is checked for
+    pending reboots and updated packages every 15 minutes.
+
+  [ Martín Ferrari ]
+  * New upstream release.
+  * Refresh patches.
+  * Update procfs dependency.
+  * Avoid waking up disks unnecessarily. Closes: #916055
+
+ -- Martín Ferrari <tincho@debian.org>  Thu, 13 Dec 2018 23:29:44 +0000
+
 prometheus-node-exporter (0.16.0+ds-2) unstable; urgency=medium
 
   [ Philipp Kern ]
