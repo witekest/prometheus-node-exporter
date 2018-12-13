@@ -1,9 +1,7 @@
 Description: Set defaults that make sense for Debian systems.
-Index: prometheus-node-exporter/collector/netdev_common.go
-===================================================================
---- prometheus-node-exporter.orig/collector/netdev_common.go
-+++ prometheus-node-exporter/collector/netdev_common.go
-@@ -26,7 +26,7 @@ import (
+--- a/collector/netdev_common.go
++++ b/collector/netdev_common.go
+@@ -26,7 +26,7 @@
  )
  
  var (
@@ -12,24 +10,20 @@ Index: prometheus-node-exporter/collector/netdev_common.go
  )
  
  type netDevCollector struct {
-Index: prometheus-node-exporter/collector/filesystem_linux.go
-===================================================================
---- prometheus-node-exporter.orig/collector/filesystem_linux.go
-+++ prometheus-node-exporter/collector/filesystem_linux.go
-@@ -25,7 +25,7 @@ import (
+--- a/collector/filesystem_linux.go
++++ b/collector/filesystem_linux.go
+@@ -29,7 +29,7 @@
  )
  
  const (
--	defIgnoredMountPoints = "^/(dev|proc|sys|var/lib/docker)($|/)"
-+	defIgnoredMountPoints = "^/(dev|proc|run|sys|mnt|media|var/lib/docker)($|/)"
- 	defIgnoredFSTypes     = "^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs)$"
- 	readOnly              = 0x1 // ST_RDONLY
+-	defIgnoredMountPoints = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
++	defIgnoredMountPoints = "^/(dev|proc|run|sys|mnt|media|var/lib/docker/.+)($|/)"
+ 	defIgnoredFSTypes     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+ 	mountTimeout          = 30 * time.Second
  )
-Index: prometheus-node-exporter/collector/textfile.go
-===================================================================
---- prometheus-node-exporter.orig/collector/textfile.go
-+++ prometheus-node-exporter/collector/textfile.go
-@@ -32,7 +32,7 @@ import (
+--- a/collector/textfile.go
++++ b/collector/textfile.go
+@@ -32,7 +32,7 @@
  )
  
  var (
@@ -38,11 +32,9 @@ Index: prometheus-node-exporter/collector/textfile.go
  	mtimeDesc         = prometheus.NewDesc(
  		"node_textfile_mtime_seconds",
  		"Unixtime mtime of textfiles successfully read.",
-Index: prometheus-node-exporter/collector/systemd_linux.go
-===================================================================
---- prometheus-node-exporter.orig/collector/systemd_linux.go
-+++ prometheus-node-exporter/collector/systemd_linux.go
-@@ -28,7 +28,7 @@ import (
+--- a/collector/systemd_linux.go
++++ b/collector/systemd_linux.go
+@@ -29,7 +29,7 @@
  
  var (
  	unitWhitelist  = kingpin.Flag("collector.systemd.unit-whitelist", "Regexp of systemd units to whitelist. Units must both match whitelist and not match blacklist to be included.").Default(".+").String()
@@ -51,7 +43,7 @@ Index: prometheus-node-exporter/collector/systemd_linux.go
  	systemdPrivate = kingpin.Flag("collector.systemd.private", "Establish a private, direct connection to systemd without dbus.").Bool()
  )
  
-@@ -44,7 +44,7 @@ type systemdCollector struct {
+@@ -52,7 +52,7 @@
  var unitStatesName = []string{"active", "activating", "deactivating", "inactive", "failed"}
  
  func init() {
