@@ -1,9 +1,9 @@
-prometheus-node-exporter (0.17.0+ds-2) UNRELEASED; urgency=medium
+prometheus-node-exporter (0.17.0+ds-2) unstable; urgency=medium
 
   * Use alternative solution for #916236, cherry-picked from upstream;
     thanks to Andre Heider for the patch.
 
- -- Martín Ferrari <tincho@debian.org>  Fri, 14 Dec 2018 14:09:20 +0000
+ -- Martín Ferrari <tincho@debian.org>  Fri, 14 Dec 2018 14:09:27 +0000
 
 prometheus-node-exporter (0.17.0+ds-1) unstable; urgency=medium
 
