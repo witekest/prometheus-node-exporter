@@ -66,6 +66,10 @@ override_dh_installsystemd:
 	dh_installsystemd --name=prometheus-node-exporter-apt \
 		--no-start \
 		prometheus-node-exporter-apt.service
+	dh_installsystemd --name=prometheus-node-exporter-ipmitool-sensor \
+		prometheus-node-exporter-ipmitool-sensor.timer
+	dh_installsystemd --name=prometheus-node-exporter-ipmitool-sensor \
+		--no-start prometheus-node-exporter-ipmitool-sensor.service
 	dh_installsystemd --name=prometheus-node-exporter-mellanox-hca-temp \
 		prometheus-node-exporter-mellanox-hca-temp.timer
 	dh_installsystemd --name=prometheus-node-exporter-mellanox-hca-temp \
