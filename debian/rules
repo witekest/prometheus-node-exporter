@@ -66,5 +66,9 @@ override_dh_installsystemd:
 	dh_installsystemd --name=prometheus-node-exporter-apt \
 		--no-start \
 		prometheus-node-exporter-apt.service
+	dh_installsystemd --name=prometheus-node-exporter-mellanox-hca-temp \
+		prometheus-node-exporter-mellanox-hca-temp.timer
+	dh_installsystemd --name=prometheus-node-exporter-mellanox-hca-temp \
+		--no-start prometheus-node-exporter-mellanox-hca-temp.service
 
 override_dh_auto_install:

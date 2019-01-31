@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Mellanox HCA temperature collection every minute
+ConditionFileIsExecutable=/usr/bin/mget_temp_ext
+ConditionDirectoryNotEmpty=/sys/class/infiniband
+
+[Timer]
+OnBootSec=0
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=timers.target
