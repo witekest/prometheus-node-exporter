@@ -1,3 +1,18 @@
+prometheus-node-exporter (0.17.0+ds-3) unstable; urgency=medium
+
+  [ Benjamin Drung ]
+  * Team upload
+  * Ship a systemd service for the mellanox_hca_temp collector
+  * Ship a systemd service for the ipmitool sensor collector
+  * Drop python from Recommends (All text collector script use Python 3 now)
+  * Bump Standards-Version to 4.3.0 (no changes required)
+
+  [ Martín Ferrari ]
+  * Set TMPDIR so textfiles are created atomically. Closes: #920827.
+  * Recommend dbus, as the systemd collector does not work without it.
+
+ -- Benjamin Drung <benjamin.drung@cloud.ionos.com>  Thu, 31 Jan 2019 18:33:42 +0100
+
 prometheus-node-exporter (0.17.0+ds-2) unstable; urgency=medium
 
   * Use alternative solution for #916236, cherry-picked from upstream;
