@@ -38,6 +38,12 @@ License: Expat
 Comment: Included in the repackaged source, as it does not seem to deserve a
  separate package.
 
+Files: vendor/github.com/hodgesds/*
+Copyright: 2019 Daniel Hodges
+License: MIT
+Comment: Included in the repackaged source, as it does not seem to deserve a
+ separate package.
+
 Files: debian/*
 Copyright: 2015 Martín Ferrari <tincho@tincho.org>
 License: Apache-2.0
