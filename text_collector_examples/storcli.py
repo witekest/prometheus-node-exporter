@@ -95,6 +95,8 @@ def handle_megaraid_controller(response):
     add_metric('scheduled_patrol_read', baselabel,
                int('hrs' in response['Scheduled Tasks']['Patrol Read Reoccurrence']))
     add_metric('temperature', baselabel, int(response['HwCfg']['ROC temperature(Degree Celsius)']))
+    for cvidx, cvinfo in enumerate(response['Cachevault_Info']):
+        add_metric('cv_temperature', baselabel + ',cvidx="' + str(cvidx) + '"', int(cvinfo['Temp'].replace('C','')))
 
     time_difference_seconds = -1
     system_time = datetime.strptime(response['Basics'].get('Current System Date/time'),
@@ -148,12 +150,13 @@ def create_metrcis_of_physical_drive(physical_drive, detailed_info_array, contro
     pd_baselabel = 'controller="{}",enclosure="{}",slot="{}"'.format(controller_index, enclosure,
                                                                      slot)
     pd_info_label = pd_baselabel + \
-        ',disk_id="{}",interface="{}",media="{}",model="{}",DG="{}"'.format(
+        ',disk_id="{}",interface="{}",media="{}",model="{}",DG="{}",state="{}"'.format(
             str(physical_drive.get('DID')).strip(),
             str(physical_drive.get('Intf')).strip(),
             str(physical_drive.get('Med')).strip(),
             str(physical_drive.get('Model')).strip(),
-            str(physical_drive.get('DG')).strip())
+            str(physical_drive.get('DG')).strip(),
+            str(physical_drive.get('State')).strip())
 
     drive_identifier = 'Drive /c' + str(controller_index) + '/e' + str(enclosure) + '/s' + str(
         slot)
