@@ -1,0 +1,100 @@
+Cherry-pick changes from upstream to support procfs 0.0.2.
+
+See https://github.com/prometheus/node_exporter/pull/1376
+--- a/collector/buddyinfo.go
++++ b/collector/buddyinfo.go
+@@ -55,7 +55,7 @@
+ // Update calls (*buddyinfoCollector).getBuddyInfo to get the platform specific
+ // buddyinfo metrics.
+ func (c *buddyinfoCollector) Update(ch chan<- prometheus.Metric) error {
+-	buddyInfo, err := c.fs.NewBuddyInfo()
++	buddyInfo, err := c.fs.BuddyInfo()
+ 	if err != nil {
+ 		return fmt.Errorf("couldn't get buddyinfo: %s", err)
+ 	}
+--- a/collector/cpufreq_linux.go
++++ b/collector/cpufreq_linux.go
+@@ -80,7 +80,7 @@
+ 
+ // Update implements Collector and exposes cpu related metrics from /proc/stat and /sys/.../cpu/.
+ func (c *cpuFreqCollector) Update(ch chan<- prometheus.Metric) error {
+-	cpuFreqs, err := c.fs.NewSystemCpufreq()
++	cpuFreqs, err := c.fs.SystemCpufreq()
+ 	if err != nil {
+ 		return err
+ 	}
+--- a/collector/ipvs_linux.go
++++ b/collector/ipvs_linux.go
+@@ -106,7 +106,7 @@
+ }
+ 
+ func (c *ipvsCollector) Update(ch chan<- prometheus.Metric) error {
+-	ipvsStats, err := c.fs.NewIPVSStats()
++	ipvsStats, err := c.fs.IPVSStats()
+ 	if err != nil {
+ 		// Cannot access ipvs metrics, report no error.
+ 		if os.IsNotExist(err) {
+@@ -121,7 +121,7 @@
+ 	ch <- c.incomingBytes.mustNewConstMetric(float64(ipvsStats.IncomingBytes))
+ 	ch <- c.outgoingBytes.mustNewConstMetric(float64(ipvsStats.OutgoingBytes))
+ 
+-	backendStats, err := c.fs.NewIPVSBackendStatus()
++	backendStats, err := c.fs.IPVSBackendStatus()
+ 	if err != nil {
+ 		return fmt.Errorf("could not get backend status: %s", err)
+ 	}
+--- a/collector/netclass_linux.go
++++ b/collector/netclass_linux.go
+@@ -169,7 +169,7 @@
+ }
+ 
+ func (c *netClassCollector) getNetClassInfo() (sysfs.NetClass, error) {
+-	netClass, err := c.fs.NewNetClass()
++	netClass, err := c.fs.NetClass()
+ 
+ 	if err != nil {
+ 		return netClass, fmt.Errorf("error obtaining net class info: %s", err)
+--- a/collector/pressure_linux.go
++++ b/collector/pressure_linux.go
+@@ -82,7 +82,7 @@
+ func (c *pressureStatsCollector) Update(ch chan<- prometheus.Metric) error {
+ 	for _, res := range psiResources {
+ 		log.Debugf("collecting statistics for resource: %s", res)
+-		vals, err := c.fs.NewPSIStatsForResource(res)
++		vals, err := c.fs.PSIStatsForResource(res)
+ 		if err != nil {
+ 			log.Debug("pressure information is unavailable, you need a Linux kernel >= 4.20 and/or CONFIG_PSI enabled for your kernel")
+ 			return nil
+--- a/collector/cpu_linux.go
++++ b/collector/cpu_linux.go
+@@ -155,7 +155,7 @@
+ 
+ // updateStat reads /proc/stat through procfs and exports cpu related metrics.
+ func (c *cpuCollector) updateStat(ch chan<- prometheus.Metric) error {
+-	stats, err := c.fs.NewStat()
++	stats, err := c.fs.Stat()
+ 	if err != nil {
+ 		return err
+ 	}
+--- a/collector/processes_linux.go
++++ b/collector/processes_linux.go
+@@ -105,7 +105,7 @@
+ 	thread := 0
+ 	procStates := make(map[string]int32)
+ 	for _, pid := range p {
+-		stat, err := pid.NewStat()
++		stat, err := pid.Stat()
+ 		// PIDs can vanish between getting the list and getting stats.
+ 		if os.IsNotExist(err) {
+ 			log.Debugf("file not found when retrieving stats: %q", err)
+--- a/collector/stat_linux.go
++++ b/collector/stat_linux.go
+@@ -80,7 +80,7 @@
+ 
+ // Update implements Collector and exposes kernel and system statistics.
+ func (c *statCollector) Update(ch chan<- prometheus.Metric) error {
+-	stats, err := c.fs.NewStat()
++	stats, err := c.fs.Stat()
+ 	if err != nil {
+ 		return err
+ 	}
