@@ -2,9 +2,12 @@ prometheus-node-exporter (0.18.1+ds-1) UNRELEASED; urgency=medium
 
   [ Daniel Swarbrick ]
   * New upstream release.
+  * Also add myself to uploaders.
+  * Add new build dependency golang-go.uber-multierr-dev
+  * Add patch to allow building against procfs 0.0.2
 
   [ Benjamin Drung ]
-  * Patch btrfs_stats script to use Python 3 
+  * Patch btrfs_stats script to use Python 3
 
  -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Wed, 12 Jun 2019 14:18:45 +0200
 
