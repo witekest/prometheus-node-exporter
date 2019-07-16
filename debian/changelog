@@ -1,4 +1,4 @@
-prometheus-node-exporter (0.18.1+ds-1) UNRELEASED; urgency=medium
+prometheus-node-exporter (0.18.1+ds-1) unstable; urgency=medium
 
   [ Daniel Swarbrick ]
   * New upstream release.
@@ -8,8 +8,10 @@ prometheus-node-exporter (0.18.1+ds-1) UNRELEASED; urgency=medium
 
   [ Benjamin Drung ]
   * Patch btrfs_stats script to use Python 3
+  * Bump Standards-Version to 4.4.0
+  * debian/copyright: Add missing MIT license paragraph
 
- -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Wed, 12 Jun 2019 14:18:45 +0200
+ -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Tue, 16 Jul 2019 11:18:46 +0200
 
 prometheus-node-exporter (0.17.0+ds-3) unstable; urgency=medium
 
