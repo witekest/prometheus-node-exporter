@@ -1,0 +1,1801 @@
+--- a/text_collector_examples/apt.sh	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,32 +0,0 @@
+-#!/bin/bash
+-#
+-# Description: Expose metrics from apt updates.
+-#
+-# Author: Ben Kochie <superq@gmail.com>
+-
+-upgrades="$(/usr/bin/apt-get --just-print upgrade \
+-  | /usr/bin/awk -F'[()]' \
+-      '/^Inst/ { sub("^[^ ]+ ", "", $2); sub("\\[", " ", $2);
+-                 sub(" ", "", $2); sub("\\]", "", $2); print $2 }' \
+-  | /usr/bin/sort \
+-  | /usr/bin/uniq -c \
+-  | awk '{ gsub(/\\\\/, "\\\\", $2); gsub(/\"/, "\\\"", $2);
+-           gsub(/\[/, "", $3); gsub(/\]/, "", $3);
+-           print "apt_upgrades_pending{origin=\"" $2 "\",arch=\"" $3 "\"} " $1}'
+-)"
+-
+-echo '# HELP apt_upgrades_pending Apt package pending updates by origin.'
+-echo '# TYPE apt_upgrades_pending gauge'
+-if [[ -n "${upgrades}" ]] ; then
+-  echo "${upgrades}"
+-else
+-  echo 'apt_upgrades_pending{origin="",arch=""} 0'
+-fi
+-
+-echo '# HELP node_reboot_required Node reboot is required for software updates.'
+-echo '# TYPE node_reboot_required gauge'
+-if [[ -f '/run/reboot-required' ]] ; then
+-  echo 'node_reboot_required 1'
+-else
+-  echo 'node_reboot_required 0'
+-fi
+--- a/text_collector_examples/README.md	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,16 +0,0 @@
+-# Text collector example scripts
+-
+-These scripts are examples to be used with the Node Exporter Textfile
+-Collector.
+-
+-To use these scripts, we recommend using a `sponge` to atomically write the output.
+-
+-   <collector_script> | sponge <output_file>
+-
+-Sponge comes from [moreutils](https://joeyh.name/code/moreutils/)
+-* [brew install moreutils](http://brewformulas.org/Moreutil)
+-* [apt install moreutils](https://packages.debian.org/search?keywords=moreutils)
+-* [pkg install moreutils](https://www.freshports.org/sysutils/moreutils/)        
+-
+-For more information see:
+-https://github.com/prometheus/node_exporter#textfile-collector
+--- a/text_collector_examples/btrfs_stats.py	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,112 +0,0 @@
+-#!/usr/bin/env python
+-
+-# Collect per-device btrfs filesystem errors.
+-# Designed to work on Debian and Centos 6 (with python2.6).
+-
+-import collections
+-import glob
+-import os
+-import re
+-import subprocess
+-
+-def get_btrfs_mount_points():
+-    """List all btrfs mount points.
+-
+-    Yields:
+-        (string) filesystem mount points.
+-    """
+-    with open("/proc/mounts") as f:
+-        for line in f:
+-            parts = line.split()
+-            if parts[2] == "btrfs":
+-                yield parts[1]
+-
+-def get_btrfs_errors(mountpoint):
+-    """Get per-device errors for a btrfs mount point.
+-
+-    Args:
+-        mountpoint: (string) path to a mount point.
+-
+-    Yields:
+-        (device, error_type, error_count) tuples, where:
+-            device: (string) path to block device.
+-            error_type: (string) type of btrfs error.
+-            error_count: (int) number of btrfs errors of a given type.
+-    """
+-    p = subprocess.Popen(["btrfs", "device", "stats", mountpoint],
+-                         stdout=subprocess.PIPE)
+-    (stdout, stderr) = p.communicate()
+-    if p.returncode != 0:
+-        raise RuntimeError("btrfs returned exit code %d" % p.returncode)
+-    for line in stdout.splitlines():
+-        if line == '':
+-            continue
+-        # Sample line:
+-        # [/dev/vdb1].flush_io_errs   0
+-        m = re.search(r"^\[([^\]]+)\]\.(\S+)\s+(\d+)$", line.decode("utf-8"))
+-        if not m:
+-            raise RuntimeError("unexpected output from btrfs: '%s'" % line)
+-        yield m.group(1), m.group(2), int(m.group(3))
+-
+-def btrfs_error_metrics():
+-    """Collect btrfs error metrics.
+-
+-    Returns:
+-        a list of strings to be exposed as Prometheus metrics.
+-    """
+-    metric = "node_btrfs_errors_total"
+-    contents = [
+-        "# TYPE %s counter" % metric,
+-        "# HELP %s number of btrfs errors" % metric,
+-    ]
+-    errors_by_device = collections.defaultdict(dict)
+-    for mountpoint in get_btrfs_mount_points():
+-        for device, error_type, error_count in get_btrfs_errors(mountpoint):
+-            contents.append(
+-                '%s{mountpoint="%s",device="%s",type="%s"} %d' %
+-                (metric, mountpoint, device, error_type, error_count))
+-
+-    if len(contents) > 2:
+-        # return metrics if there are actual btrfs filesystems found
+-        # (i.e. `contents` contains more than just TYPE and HELP).
+-        return contents
+-
+-def btrfs_allocation_metrics():
+-    """Collect btrfs allocation metrics.
+-
+-    Returns:
+-        a list of strings to be exposed as Prometheus metrics.
+-    """
+-    prefix = 'node_btrfs_allocation'
+-    metric_to_filename = {
+-        'size_bytes': 'total_bytes',
+-        'used_bytes': 'bytes_used',
+-        'reserved_bytes': 'bytes_reserved',
+-        'pinned_bytes': 'bytes_pinned',
+-        'disk_size_bytes': 'disk_total',
+-        'disk_used_bytes': 'disk_used',
+-    }
+-    contents = []
+-    for m, f in metric_to_filename.items():
+-        contents += [
+-            "# TYPE %s_%s gauge" % (prefix, m),
+-            "# HELP %s_%s btrfs allocation data (%s)" % (prefix, m, f),
+-        ]
+-
+-    for alloc in glob.glob("/sys/fs/btrfs/*/allocation"):
+-        fs = alloc.split('/')[4]
+-        for type_ in ('data', 'metadata', 'system'):
+-            for m, f in metric_to_filename.items():
+-                filename = os.path.join(alloc, type_, f)
+-                with open(filename) as f:
+-                    value = int(f.read().strip())
+-                    contents.append('%s_%s{fs="%s",type="%s"} %d' % (
+-                        prefix, m, fs, type_, value))
+-    if len(contents) > 2*len(metric_to_filename):
+-        return contents
+-
+-if __name__ == "__main__":
+-    contents = ((btrfs_error_metrics() or []) +
+-                (btrfs_allocation_metrics() or []))
+-
+-    print("\n".join(contents))
+--- a/text_collector_examples/deleted_libraries.py	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,70 +0,0 @@
+-#!/usr/bin/env python3
+-"""
+-Script to count the number of deleted libraries that are linked by running
+-processes and expose a summary as Prometheus metrics.
+-
+-The aim is to discover processes that are still using libraries that have since
+-been updated, perhaps due security vulnerabilities.
+-"""
+-
+-import errno
+-import glob
+-import os
+-import sys
+-
+-
+-def main():
+-    processes_linking_deleted_libraries = {}
+-
+-    for path in glob.glob('/proc/*/maps'):
+-        try:
+-            with open(path, 'rb') as file:
+-                for line in file:
+-                    part = line.decode().strip().split()
+-
+-                    if len(part) == 7:
+-                        library = part[5]
+-                        comment = part[6]
+-
+-                        if '/lib/' in library and '(deleted)' in comment:
+-                            if path not in processes_linking_deleted_libraries:
+-                                processes_linking_deleted_libraries[path] = {}
+-
+-                                if library in processes_linking_deleted_libraries[path]:
+-                                    processes_linking_deleted_libraries[path][library] += 1
+-                                else:
+-                                    processes_linking_deleted_libraries[path][library] = 1
+-        except EnvironmentError as e:
+-            # Ignore non-existent files, since the files may have changed since
+-            # we globbed.
+-            if e.errno != errno.ENOENT:
+-                sys.exit('Failed to open file: {0}'.format(path))
+-
+-    num_processes_per_library = {}
+-
+-    for process, library_count in processes_linking_deleted_libraries.items():
+-        libraries_seen = set()
+-        for library, count in library_count.items():
+-            if library in libraries_seen:
+-                continue
+-
+-            libraries_seen.add(library)
+-            if library in num_processes_per_library:
+-                num_processes_per_library[library] += 1
+-            else:
+-                num_processes_per_library[library] = 1
+-
+-    metric_name = 'node_processes_linking_deleted_libraries'
+-    description = 'Count of running processes that link a deleted library'
+-    print('# HELP {0} {1}'.format(metric_name, description))
+-    print('# TYPE {0} gauge'.format(metric_name))
+-
+-    for library, count in num_processes_per_library.items():
+-        dir_path, basename = os.path.split(library)
+-        basename = basename.replace('"', '\\"')
+-        dir_path = dir_path.replace('"', '\\"')
+-        print('{0}{{library_path="{1}", library_name="{2}"}} {3}'.format(metric_name, dir_path, basename, count))
+-
+-
+-if __name__ == "__main__":
+-    main()
+--- a/text_collector_examples/directory-size.sh	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,15 +0,0 @@
+-#!/bin/sh
+-#
+-# Expose directory usage metrics, passed as an argument.
+-#
+-# Usage: add this to crontab:
+-#
+-# */5 * * * * prometheus directory-size.sh /var/lib/prometheus | sponge /var/lib/node_exporter/directory_size.prom
+-#
+-# sed pattern taken from https://www.robustperception.io/monitoring-directory-sizes-with-the-textfile-collector/
+-#
+-# Author: Antoine Beaupré <anarcat@debian.org>
+-echo "# HELP node_directory_size_bytes Disk space used by some directories"
+-echo "# TYPE node_directory_size_bytes gauge"
+-du --block-size=1 --summarize "$@" \
+-  | sed -ne 's/\\/\\\\/;s/"/\\"/g;s/^\([0-9]\+\)\t\(.*\)$/node_directory_size_bytes{directory="\2"} \1/p'
+--- a/text_collector_examples/inotify-instances	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,141 +0,0 @@
+-#!/usr/bin/env python3
+-
+-"""
+-Expose Linux inotify(7) instance resource consumption.
+-
+-Operational properties:
+-
+-  - This script may be invoked as an unprivileged user; in this case, metrics
+-    will only be exposed for processes owned by that unprivileged user.
+-
+-  - No metrics will be exposed for processes that do not hold any inotify fds.
+-
+-Requires Python 3.5 or later.
+-"""
+-
+-import collections
+-import os
+-import sys
+-
+-
+-class Error(Exception):
+-    pass
+-
+-
+-class _PIDGoneError(Error):
+-    pass
+-
+-
+-_Process = collections.namedtuple(
+-    "Process", ["pid", "uid", "command", "inotify_instances"])
+-
+-
+-def _read_bytes(name):
+-    with open(name, mode='rb') as f:
+-        return f.read()
+-
+-
+-def _pids():
+-    for n in os.listdir("/proc"):
+-        if not n.isdigit():
+-            continue
+-        yield int(n)
+-
+-
+-def _pid_uid(pid):
+-    try:
+-        s = os.stat("/proc/{}".format(pid))
+-    except FileNotFoundError:
+-        raise _PIDGoneError()
+-    return s.st_uid
+-
+-
+-def _pid_command(pid):
+-    # Avoid GNU ps(1) for it truncates comm.
+-    # https://bugs.launchpad.net/ubuntu/+source/procps/+bug/295876/comments/3
+-    try:
+-        cmdline = _read_bytes("/proc/{}/cmdline".format(pid))
+-    except FileNotFoundError:
+-        raise _PIDGoneError()
+-
+-    if not len(cmdline):
+-        return "<zombie>"
+-
+-    try:
+-        prog = cmdline[0:cmdline.index(0x00)]
+-    except ValueError:
+-        prog = cmdline
+-    return os.path.basename(prog).decode(encoding="ascii",
+-                                         errors="surrogateescape")
+-
+-
+-def _pid_inotify_instances(pid):
+-    instances = 0
+-    try:
+-        for fd in os.listdir("/proc/{}/fd".format(pid)):
+-            try:
+-                target = os.readlink("/proc/{}/fd/{}".format(pid, fd))
+-            except FileNotFoundError:
+-                continue
+-            if target == "anon_inode:inotify":
+-                instances += 1
+-    except FileNotFoundError:
+-        raise _PIDGoneError()
+-    return instances
+-
+-
+-def _get_processes():
+-    for p in _pids():
+-        try:
+-            yield _Process(p, _pid_uid(p), _pid_command(p),
+-                           _pid_inotify_instances(p))
+-        except (PermissionError, _PIDGoneError):
+-            continue
+-
+-
+-def _get_processes_nontrivial():
+-    return (p for p in _get_processes() if p.inotify_instances > 0)
+-
+-
+-def _format_gauge_metric(metric_name, metric_help, samples,
+-                         value_func, tags_func=None, stream=sys.stdout):
+-
+-    def _println(*args, **kwargs):
+-        if "file" not in kwargs:
+-            kwargs["file"] = stream
+-        print(*args, **kwargs)
+-
+-    def _print(*args, **kwargs):
+-        if "end" not in kwargs:
+-            kwargs["end"] = ""
+-        _println(*args, **kwargs)
+-
+-    _println("# HELP {} {}".format(metric_name, metric_help))
+-    _println("# TYPE {} gauge".format(metric_name))
+-
+-    for s in samples:
+-        value = value_func(s)
+-        tags = None
+-        if tags_func:
+-            tags = tags_func(s)
+-
+-        _print(metric_name)
+-        if tags:
+-            _print("{")
+-            _print(",".join(["{}=\"{}\"".format(k, v) for k, v in tags]))
+-            _print("}")
+-        _print(" ")
+-        _println(value)
+-
+-
+-def main(args_unused=None):
+-    _format_gauge_metric(
+-        "inotify_instances",
+-        "Total number of inotify instances held open by a process.",
+-        _get_processes_nontrivial(),
+-        lambda s: s.inotify_instances,
+-        lambda s: [("pid", s.pid), ("uid", s.uid), ("command", s.command)])
+-
+-
+-if __name__ == "__main__":
+-    sys.exit(main(sys.argv))
+--- a/text_collector_examples/ipmitool	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,89 +0,0 @@
+-#!/usr/bin/awk -f
+-
+-#
+-# Converts output of `ipmitool sensor` to prometheus format.
+-#
+-# With GNU awk:
+-#   ipmitool sensor | ./ipmitool > ipmitool.prom
+-#
+-# With BSD awk:
+-#   ipmitool sensor | awk -f ./ipmitool > ipmitool.prom
+-#
+-
+-function export(values, name) {
+-	if (values["metric_count"] < 1) {
+-		return
+-	}
+-	delete values["metric_count"]
+-
+-	printf("# HELP %s%s %s sensor reading from ipmitool\n", namespace, name, help[name]);
+-	printf("# TYPE %s%s gauge\n", namespace, name);
+-	for (sensor in values) {
+-		printf("%s%s{sensor=\"%s\"} %f\n", namespace, name, sensor, values[sensor]);
+-	}
+-}
+-
+-# Fields are Bar separated, with space padding.
+-BEGIN {
+-	FS = "[ ]*[|][ ]*";
+-	namespace = "node_ipmi_";
+-
+-	# Friendly description of the type of sensor for HELP.
+-	help["temperature_celsius"] = "Temperature";
+-	help["volts"] = "Voltage";
+-	help["power_watts"] = "Power";
+-	help["speed_rpm"] = "Fan";
+-	help["status"] = "Chassis status";
+-
+-	temperature_celsius["metric_count"] = 0;
+-	volts["metric_count"] = 0;
+-	power_watts["metric_count"] = 0;
+-	speed_rpm["metric_count"] = 0;
+-	status["metric_count"] = 0;
+-}
+-
+-# Not a valid line.
+-{
+-	if (NF < 3) {
+-		next
+-	}
+-}
+-
+-# $2 is value field.
+-$2 ~ /na/ {
+-	next
+-}
+-
+-# $3 is type field.
+-$3 ~ /degrees C/ {
+-	temperature_celsius[$1] = $2;
+-	temperature_celsius["metric_count"]++;
+-}
+-
+-$3 ~ /Volts/ {
+-	volts[$1] = $2;
+-	volts["metric_count"]++;
+-}
+-
+-$3 ~ /Watts/ {
+-	power_watts[$1] = $2;
+-	power_watts["metric_count"]++;
+-}
+-
+-$3 ~ /RPM/ {
+-	speed_rpm[$1] = $2;
+-	speed_rpm["metric_count"]++;
+-}
+-
+-$3 ~ /discrete/ {
+-	status[$1] = $2;
+-	status["metric_count"]++;
+-}
+-
+-END {
+-	export(temperature_celsius, "temperature_celsius");
+-	export(volts, "volts");
+-	export(power_watts, "power_watts");
+-	export(speed_rpm, "speed_rpm");
+-	export(status, "status");
+-}
+--- a/text_collector_examples/md_info.sh	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,56 +0,0 @@
+-#!/usr/bin/env bash
+-set -eu
+-
+-for MD_DEVICE in /dev/md/*; do
+-  # Subshell to avoid eval'd variables from leaking between iterations
+-  (
+-    # Resolve symlink to discover device, e.g. /dev/md127
+-    MD_DEVICE_NUM=$(readlink -f "${MD_DEVICE}")
+-
+-    # Remove /dev/ prefix
+-    MD_DEVICE_NUM=${MD_DEVICE_NUM#/dev/}
+-    MD_DEVICE=${MD_DEVICE#/dev/md/}
+-
+-    # Query sysfs for info about md device
+-    SYSFS_BASE="/sys/devices/virtual/block/${MD_DEVICE_NUM}/md"
+-    MD_LAYOUT=$(cat "${SYSFS_BASE}/layout")
+-    MD_LEVEL=$(cat "${SYSFS_BASE}/level")
+-    MD_METADATA_VERSION=$(cat "${SYSFS_BASE}/metadata_version")
+-    MD_NUM_RAID_DISKS=$(cat "${SYSFS_BASE}/raid_disks")
+-
+-    # Remove 'raid' prefix from RAID level
+-    MD_LEVEL=${MD_LEVEL#raid}
+-
+-    # Output disk metrics
+-    for RAID_DISK in ${SYSFS_BASE}/rd[0-9]*; do
+-      DISK=$(readlink -f "${RAID_DISK}/block")
+-      DISK_DEVICE=$(basename "${DISK}")
+-      RAID_DISK_DEVICE=$(basename "${RAID_DISK}")
+-      RAID_DISK_INDEX=${RAID_DISK_DEVICE#rd}
+-      RAID_DISK_STATE=$(cat "${RAID_DISK}/state")
+-
+-      DISK_SET=""
+-      # Determine disk set using logic from mdadm: https://github.com/neilbrown/mdadm/commit/2c096ebe4b
+-      if [[ ${RAID_DISK_STATE} == "in_sync" && ${MD_LEVEL} == 10 && $((MD_LAYOUT & ~0x1ffff)) ]]; then
+-        NEAR_COPIES=$((MD_LAYOUT & 0xff))
+-        FAR_COPIES=$(((MD_LAYOUT >> 8) & 0xff))
+-        COPIES=$((NEAR_COPIES * FAR_COPIES))
+-
+-        if [[ $((MD_NUM_RAID_DISKS % COPIES == 0)) && $((COPIES <= 26)) ]]; then
+-          DISK_SET=$((RAID_DISK_INDEX % COPIES))
+-        fi
+-      fi
+-
+-      echo -n "node_md_disk_info{disk_device=\"${DISK_DEVICE}\", md_device=\"${MD_DEVICE_NUM}\""
+-      if [[ -n ${DISK_SET} ]]; then
+-        SET_LETTERS=({A..Z})
+-        echo -n ", md_set=\"${SET_LETTERS[${DISK_SET}]}\""
+-      fi
+-      echo "} 1"
+-    done
+-
+-    # Output RAID array metrics
+-    # NOTE: Metadata version is a label rather than a separate metric because the version can be a string
+-    echo "node_md_info{md_device=\"${MD_DEVICE_NUM}\", md_name=\"${MD_DEVICE}\", raid_level=\"${MD_LEVEL}\", md_metadata_version=\"${MD_METADATA_VERSION}\"} 1"
+-  )
+-done
+--- a/text_collector_examples/md_info_detail.sh	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,87 +0,0 @@
+-#!/usr/bin/env bash
+-# Note: This script uses "mdadm --detail" to get some of the metrics, so it must be run as root.
+-#       It is designed to be run periodically in a cronjob, and output to /var/lib/node_exporter/textfile_collector/md_info_detail.prom
+-#       $ cat /etc/cron.d/prometheus_md_info_detail
+-#       * * * * * bash /var/lib/node_exporter/md_info_detail.sh > /var/lib/node_exporter/md_info_detail.prom.$$ && mv /var/lib/node_exporter/md_info_detail.prom.$$ /var/lib/node_exporter/md_info_detail.prom
+-
+-set -eu
+-
+-for MD_DEVICE in /dev/md/*; do
+-  # Subshell to avoid eval'd variables from leaking between iterations
+-  (
+-    # Resolve symlink to discover device, e.g. /dev/md127
+-    MD_DEVICE_NUM=$(readlink -f "${MD_DEVICE}")
+-
+-    # Remove /dev/ prefix
+-    MD_DEVICE_NUM=${MD_DEVICE_NUM#/dev/}
+-    MD_DEVICE=${MD_DEVICE#/dev/md/}
+-
+-    # Query sysfs for info about md device
+-    SYSFS_BASE="/sys/devices/virtual/block/${MD_DEVICE_NUM}/md"
+-    MD_LAYOUT=$(cat "${SYSFS_BASE}/layout")
+-    MD_LEVEL=$(cat "${SYSFS_BASE}/level")
+-    MD_METADATA_VERSION=$(cat "${SYSFS_BASE}/metadata_version")
+-    MD_NUM_RAID_DISKS=$(cat "${SYSFS_BASE}/raid_disks")
+-
+-    # Remove 'raid' prefix from RAID level
+-    MD_LEVEL=${MD_LEVEL#raid}
+-
+-    # Output disk metrics
+-    for RAID_DISK in ${SYSFS_BASE}/rd[0-9]*; do
+-      DISK=$(readlink -f "${RAID_DISK}/block")
+-      DISK_DEVICE=$(basename "${DISK}")
+-      RAID_DISK_DEVICE=$(basename "${RAID_DISK}")
+-      RAID_DISK_INDEX=${RAID_DISK_DEVICE#rd}
+-      RAID_DISK_STATE=$(cat "${RAID_DISK}/state")
+-
+-      DISK_SET=""
+-      # Determine disk set using logic from mdadm: https://github.com/neilbrown/mdadm/commit/2c096ebe4b
+-      if [[ ${RAID_DISK_STATE} == "in_sync" && ${MD_LEVEL} == 10 && $((MD_LAYOUT & ~0x1ffff)) ]]; then
+-        NEAR_COPIES=$((MD_LAYOUT & 0xff))
+-        FAR_COPIES=$(((MD_LAYOUT >> 8) & 0xff))
+-        COPIES=$((NEAR_COPIES * FAR_COPIES))
+-
+-        if [[ $((MD_NUM_RAID_DISKS % COPIES == 0)) && $((COPIES <= 26)) ]]; then
+-          DISK_SET=$((RAID_DISK_INDEX % COPIES))
+-        fi
+-      fi
+-
+-      echo -n "node_md_disk_info{disk_device=\"${DISK_DEVICE}\", md_device=\"${MD_DEVICE_NUM}\""
+-      if [[ -n ${DISK_SET} ]]; then
+-        SET_LETTERS=({A..Z})
+-        echo -n ", md_set=\"${SET_LETTERS[${DISK_SET}]}\""
+-      fi
+-      echo "} 1"
+-    done
+-
+-    # Get output from mdadm --detail (Note: root/sudo required)
+-    MDADM_DETAIL_OUTPUT=$(mdadm --detail /dev/"${MD_DEVICE_NUM}")
+-
+-    # Output RAID "Devices", "Size" and "Event" metrics, from the output of "mdadm --detail"
+-    while IFS= read -r line ; do
+-      # Filter out these keys that have numeric values that increment up
+-      if echo "$line" | grep -E -q "Devices :|Array Size :| Used Dev Size :|Events :"; then
+-        MDADM_DETAIL_KEY=$(echo "$line" | cut -d ":" -f 1 | tr -cd '[a-zA-Z0-9]._-')
+-        MDADM_DETAIL_VALUE=$(echo "$line" | cut -d ":" -f 2 | cut -d " " -f 2 | sed 's:^ ::')
+-        echo "node_md_info_${MDADM_DETAIL_KEY}{md_device=\"${MD_DEVICE_NUM}\", md_name=\"${MD_DEVICE}\", raid_level=\"${MD_LEVEL}\", md_num_raid_disks=\"${MD_NUM_RAID_DISKS}\", md_metadata_version=\"${MD_METADATA_VERSION}\"} ${MDADM_DETAIL_VALUE}"
+-      fi
+-    done  <<< "$MDADM_DETAIL_OUTPUT"
+-
+-    # Output RAID detail metrics info from the output of "mdadm --detail"
+-    # NOTE: Sending this info as labels rather than separate metrics, because some of them can be strings.
+-    echo -n "node_md_info{md_device=\"${MD_DEVICE_NUM}\", md_name=\"${MD_DEVICE}\", raid_level=\"${MD_LEVEL}\", md_num_raid_disks=\"${MD_NUM_RAID_DISKS}\", md_metadata_version=\"${MD_METADATA_VERSION}\""
+-    while IFS= read -r line ; do
+-      # Filter for lines with a ":", to use for Key/Value pairs in labels
+-      if echo "$line" | grep -E -q ":" ; then
+-        # Exclude lines with these keys, as they're values are numbers that increment up and captured in individual metrics above
+-        if echo "$line" | grep -E -qv "Array Size|Used Dev Size|Events|Update Time" ; then
+-          echo -n ", "
+-          MDADM_DETAIL_KEY=$(echo "$line" | cut -d ":" -f 1 | tr -cd '[a-zA-Z0-9]._-')
+-          MDADM_DETAIL_VALUE=$(echo "$line" | cut -d ":" -f 2- | sed 's:^ ::')
+-          echo -n "${MDADM_DETAIL_KEY}=\"${MDADM_DETAIL_VALUE}\""
+-        fi
+-      fi
+-    done  <<< "$MDADM_DETAIL_OUTPUT"
+-    echo "} 1"
+-  )
+-done
+--- a/text_collector_examples/mellanox_hca_temp	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,59 +0,0 @@
+-#!/bin/bash
+-set -eu
+-
+-# Script to read Mellanox HCA temperature using the Mellanox mget_temp_ext tool
+-
+-# Copyright 2018 The Prometheus Authors
+-#
+-# Licensed under the Apache License, Version 2.0 (the "License");
+-# you may not use this file except in compliance with the License.
+-# You may obtain a copy of the License at
+-#
+-# http://www.apache.org/licenses/LICENSE-2.0
+-#
+-# Unless required by applicable law or agreed to in writing, software
+-# distributed under the License is distributed on an "AS IS" BASIS,
+-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-# See the License for the specific language governing permissions and
+-# limitations under the License.
+-#
+-# Author: Jan Phillip Greimann <jan.greimann@cloud.ionos.com>
+-
+-# check if root
+-if [ "$EUID" -ne 0 ]; then
+-    echo "${0##*/}: Please run as root!" >&2
+-    exit 1
+-fi
+-
+-# check if programs are installed
+-if ! command -v mget_temp_ext >/dev/null 2>&1; then
+-    echo "${0##*/}: mget_temp_ext is not installed. Aborting." >&2
+-    exit 1
+-fi
+-
+-cat <<EOF
+-# HELP node_infiniband_hca_temp_celsius Celsius temperature of Mellanox InfiniBand HCA.
+-# TYPE node_infiniband_hca_temp_celsius gauge
+-EOF
+-
+-# run for each found Mellanox device
+-for dev in /sys/class/infiniband/*; do
+-    if test ! -d "$dev"; then
+-        continue
+-    fi
+-    device="${dev##*/}"
+-
+-    # get temperature
+-    if temperature="$(mget_temp_ext -d "${device}")"; then
+-        # output
+-        echo "node_infiniband_hca_temp_celsius{hca_device=\"${device}\"} ${temperature//[[:space:]]/}"
+-    else
+-        echo "${0##*/}: Failed to get temperature from InfiniBand HCA '${device}'!" >&2
+-    fi
+-done
+-
+-# if device is empty, no device was found
+-if [ -z "${device-}" ]; then
+-    echo "${0##*/}: No InfiniBand HCA device found!" >&2
+-    exit 1
+-fi
+--- a/text_collector_examples/ntpd_metrics.py	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,122 +0,0 @@
+-#!/usr/bin/env python3
+-#
+-# Description: Extract NTPd metrics from ntpq -np.
+-# Author: Ben Kochie <superq@gmail.com>
+-
+-import re
+-import subprocess
+-import sys
+-
+-# NTP peers status, with no DNS lookups.
+-ntpq_cmd = ['ntpq', '-np']
+-ntpq_rv_cmd = ['ntpq', '-c', 'rv 0 offset,sys_jitter,rootdisp,rootdelay']
+-
+-# Regex to match all of the fields in the output of ntpq -np
+-metrics_fields = [
+-    '^(?P<status>.)(?P<remote>[\w\.]+)',
+-    '(?P<refid>[\w\.]+)',
+-    '(?P<stratum>\d+)',
+-    '(?P<type>\w)',
+-    '(?P<when>\d+)',
+-    '(?P<poll>\d+)',
+-    '(?P<reach>\d+)',
+-    '(?P<delay>\d+\.\d+)',
+-    '(?P<offset>-?\d+\.\d+)',
+-    '(?P<jitter>\d+\.\d+)',
+-]
+-metrics_re = '\s+'.join(metrics_fields)
+-
+-# Remote types
+-# http://support.ntp.org/bin/view/Support/TroubleshootingNTP
+-remote_types = {
+-    'l': 'local',
+-    'u': 'unicast',
+-    'm': 'multicast',
+-    'b': 'broadcast',
+-    '-': 'netaddr',
+-}
+-
+-# Status codes:
+-# http://www.eecis.udel.edu/~mills/ntp/html/decode.html#peer
+-status_types = {
+-    ' ': 0,
+-    'x': 1,
+-    '.': 2,
+-    '-': 3,
+-    '+': 4,
+-    '#': 5,
+-    '*': 6,
+-    'o': 7,
+-}
+-
+-
+-# Run the ntpq command.
+-def get_output(command):
+-    try:
+-        output = subprocess.check_output(command, stderr=subprocess.DEVNULL)
+-    except subprocess.CalledProcessError as e:
+-        return None
+-    return output.decode()
+-
+-
+-# Print metrics in Prometheus format.
+-def print_prometheus(metric, values):
+-    print("# HELP ntpd_%s NTPd metric for %s" % (metric, metric))
+-    print("# TYPE ntpd_%s gauge" % (metric))
+-    for labels in values:
+-        if labels is None:
+-            print("ntpd_%s %f" % (metric, values[labels]))
+-        else:
+-            print("ntpd_%s{%s} %f" % (metric, labels, values[labels]))
+-
+-
+-# Parse raw ntpq lines.
+-def parse_line(line):
+-    if re.match('\s+remote\s+refid', line):
+-        return None
+-    if re.match('=+', line):
+-        return None
+-    if re.match('.+\.(LOCL|POOL)\.', line):
+-        return None
+-    if re.match('^$', line):
+-        return None
+-    return re.match(metrics_re, line)
+-
+-
+-# Main function
+-def main(argv):
+-    ntpq = get_output(ntpq_cmd)
+-    peer_status_metrics = {}
+-    delay_metrics = {}
+-    offset_metrics = {}
+-    jitter_metrics = {}
+-    for line in ntpq.split('\n'):
+-        metric_match = parse_line(line)
+-        if metric_match is None:
+-            continue
+-        remote = metric_match.group('remote')
+-        refid = metric_match.group('refid')
+-        stratum = metric_match.group('stratum')
+-        remote_type = remote_types[metric_match.group('type')]
+-        common_labels = "remote=\"%s\",reference=\"%s\"" % (remote, refid)
+-        peer_labels = "%s,stratum=\"%s\",type=\"%s\"" % (common_labels, stratum, remote_type)
+-
+-        peer_status_metrics[peer_labels] = float(status_types[metric_match.group('status')])
+-        delay_metrics[common_labels] = float(metric_match.group('delay'))
+-        offset_metrics[common_labels] = float(metric_match.group('offset'))
+-        jitter_metrics[common_labels] = float(metric_match.group('jitter'))
+- 
+-    print_prometheus('peer_status', peer_status_metrics)
+-    print_prometheus('delay_milliseconds', delay_metrics)
+-    print_prometheus('offset_milliseconds', offset_metrics)
+-    print_prometheus('jitter_milliseconds', jitter_metrics)
+-
+-    ntpq_rv = get_output(ntpq_rv_cmd)
+-    for metric in ntpq_rv.split(','):
+-        metric_name, metric_value = metric.strip().split('=')
+-        print_prometheus(metric_name, {None: float(metric_value)})
+-
+-
+-# Go go go!
+-if __name__ == "__main__":
+-     main(sys.argv[1:])
+--- a/text_collector_examples/nvme_metrics.sh	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,97 +0,0 @@
+-#!/usr/bin/env bash
+-set -eu
+-
+-# Dependencies: nvme-cli, jq (packages)
+-# Based on code from
+-# - https://github.com/prometheus/node_exporter/blob/master/text_collector_examples/smartmon.sh
+-# - https://github.com/prometheus/node_exporter/blob/master/text_collector_examples/mellanox_hca_temp
+-# - https://github.com/vorlon/check_nvme/blob/master/check_nvme.sh
+-#
+-# Author: Henk <henk@wearespindle.com>
+-
+-# Check if we are root
+-if [ "$EUID" -ne 0 ]; then
+-  echo "${0##*/}: Please run as root!" >&2
+-  exit 1
+-fi
+-
+-# Check if programs are installed
+-if ! command -v nvme >/dev/null 2>&1; then
+-  echo "${0##*/}: nvme is not installed. Aborting." >&2
+-  exit 1
+-fi
+-
+-output_format_awk="$(
+-  cat <<'OUTPUTAWK'
+-BEGIN { v = "" }
+-v != $1 {
+-  print "# HELP nvme_" $1 " SMART metric " $1;
+-  if ($1 ~ /_total$/)
+-    print "# TYPE nvme_" $1 " counter";
+-  else
+-    print "# TYPE nvme_" $1 " gauge";
+-  v = $1
+-}
+-{print "nvme_" $0}
+-OUTPUTAWK
+-)"
+-
+-format_output() {
+-  sort | awk -F'{' "${output_format_awk}"
+-}
+-
+-# Get the nvme-cli version
+-nvme_version="$(nvme version | awk '$1 == "nvme" {print $3}')"
+-echo "nvmecli{version=\"${nvme_version}\"} 1" | format_output
+-
+-# Get devices
+-device_list="$(nvme list | awk '/^\/dev/{print $1}')"
+-
+-# Loop through the NVMe devices
+-for device in ${device_list}; do
+-  json_check="$(nvme smart-log -o json "${device}")"
+-  disk="$(echo "${device}" | cut -c6-10)"
+-
+-  # The temperature value in JSON is in Kelvin, we want Celsius
+-  value_temperature="$(echo "$json_check" | jq '.temperature - 273')"
+-  echo "temperature_celcius{device=\"${disk}\"} ${value_temperature}"
+-
+-  value_available_spare="$(echo "$json_check" | jq '.avail_spare / 100')"
+-  echo "available_spare_ratio{device=\"${disk}\"} ${value_available_spare}"
+-
+-  value_available_spare_threshold="$(echo "$json_check" | jq '.spare_thresh / 100')"
+-  echo "available_spare_threshold_ratio{device=\"${disk}\"} ${value_available_spare_threshold}"
+-
+-  value_percentage_used="$(echo "$json_check" | jq '.percent_used / 100')"
+-  echo "percentage_used_ratio{device=\"${disk}\"} ${value_percentage_used}"
+-
+-  value_critical_warning="$(echo "$json_check" | jq '.critical_warning')"
+-  echo "critical_warning_total{device=\"${disk}\"} ${value_critical_warning}"
+-
+-  value_media_errors="$(echo "$json_check" | jq '.media_errors')"
+-  echo "media_errors_total{device=\"${disk}\"} ${value_media_errors}"
+-
+-  value_num_err_log_entries="$(echo "$json_check" | jq '.num_err_log_entries')"
+-  echo "num_err_log_entries_total{device=\"${disk}\"} ${value_num_err_log_entries}"
+-
+-  value_power_cycles="$(echo "$json_check" | jq '.power_cycles')"
+-  echo "power_cycles_total{device=\"${disk}\"} ${value_power_cycles}"
+-
+-  value_power_on_hours="$(echo "$json_check" | jq '.power_on_hours')"
+-  echo "power_on_hours_total{device=\"${disk}\"} ${value_power_on_hours}"
+-
+-  value_controller_busy_time="$(echo "$json_check" | jq '.controller_busy_time')"
+-  echo "controller_busy_time_seconds{device=\"${disk}\"} ${value_controller_busy_time}"
+-
+-  value_data_units_written="$(echo "$json_check" | jq '.data_units_written')"
+-  echo "data_units_written_total{device=\"${disk}\"} ${value_data_units_written}"
+-
+-  value_data_units_read="$(echo "$json_check" | jq '.data_units_read')"
+-  echo "data_units_read_total{device=\"${disk}\"} ${value_data_units_read}"
+-
+-  value_host_read_commands="$(echo "$json_check" | jq '.host_read_commands')"
+-  echo "host_read_commands_total{device=\"${disk}\"} ${value_host_read_commands}"
+-
+-  value_host_write_commands="$(echo "$json_check" | jq '.host_write_commands')"
+-  echo "host_write_commands_total{device=\"${disk}\"} ${value_host_write_commands}"
+-done | format_output
+--- a/text_collector_examples/pacman.sh	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,33 +0,0 @@
+-#!/bin/bash
+-#
+-#
+-# Description: Expose metrics from pacman updates
+-# If installed The bash script *checkupdates*, included with the
+-# *pacman-contrib* package, is used to calculate the number of pending updates.
+-# Otherwise *pacman* is used for calculation.
+-#
+-# Author: Sven Haardiek <sven@haardiek.de>
+-
+-set -o errexit
+-set -o nounset
+-set -o pipefail
+-
+-if [ -x /usr/bin/checkupdates ]
+-then
+-    updates=$(/usr/bin/checkupdates | wc -l)
+-    cache=0
+-else
+-    if ! updates=$(/usr/bin/pacman -Qu | wc -l)
+-    then
+-        updates=0
+-    fi
+-    cache=1
+-fi
+-
+-echo "# HELP updates_pending number of pending updates from pacman"
+-echo "# TYPE updates_pending gauge"
+-echo "pacman_updates_pending $updates"
+-
+-echo "# HELP pacman_updates_pending_from_cache pending updates information are from cache"
+-echo "# TYPE pacman_updates_pending_from_cache gauge"
+-echo "pacman_updates_pending_from_cache $cache"
+--- a/text_collector_examples/smartmon.py	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,378 +0,0 @@
+-#!/usr/bin/env python3
+-import argparse
+-import collections
+-import csv
+-import datetime
+-import decimal
+-import re
+-import shlex
+-import subprocess
+-
+-device_info_re = re.compile(r'^(?P<k>[^:]+?)(?:(?:\sis|):)\s*(?P<v>.*)$')
+-
+-ata_error_count_re = re.compile(
+-    r'^Error (\d+) \[\d+\] occurred', re.MULTILINE)
+-
+-self_test_re = re.compile(r'^SMART.*(PASSED|OK)$', re.MULTILINE)
+-
+-device_info_map = {
+-    'Vendor': 'vendor',
+-    'Product': 'product',
+-    'Revision': 'revision',
+-    'Logical Unit id': 'lun_id',
+-    'Model Family': 'model_family',
+-    'Device Model': 'device_model',
+-    'Serial Number': 'serial_number',
+-    'Firmware Version': 'firmware_version',
+-}
+-
+-smart_attributes_whitelist = {
+-    'airflow_temperature_cel',
+-    'command_timeout',
+-    'current_pending_sector',
+-    'end_to_end_error',
+-    'erase_fail_count_total',
+-    'g_sense_error_rate',
+-    'hardware_ecc_recovered',
+-    'host_reads_mib',
+-    'host_reads_32mib',
+-    'host_writes_mib',
+-    'host_writes_32mib',
+-    'load_cycle_count',
+-    'media_wearout_indicator',
+-    'wear_leveling_count',
+-    'nand_writes_1gib',
+-    'offline_uncorrectable',
+-    'power_cycle_count',
+-    'power_on_hours',
+-    'program_fail_count',
+-    'raw_read_error_rate',
+-    'reallocated_event_count',
+-    'reallocated_sector_ct',
+-    'reported_uncorrect',
+-    'sata_downshift_count',
+-    'seek_error_rate',
+-    'spin_retry_count',
+-    'spin_up_time',
+-    'start_stop_count',
+-    'temperature_case',
+-    'temperature_celsius',
+-    'temperature_internal',
+-    'total_lbas_read',
+-    'total_lbas_written',
+-    'udma_crc_error_count',
+-    'unsafe_shutdown_count',
+-    'workld_host_reads_perc',
+-    'workld_media_wear_indic',
+-    'workload_minutes',
+-}
+-
+-Metric = collections.namedtuple('Metric', 'name labels value')
+-
+-SmartAttribute = collections.namedtuple('SmartAttribute', [
+-    'id', 'name', 'flag', 'value', 'worst', 'threshold', 'type', 'updated',
+-    'when_failed', 'raw_value',
+-])
+-
+-
+-class Device(collections.namedtuple('DeviceBase', 'path opts')):
+-    """Representation of a device as found by smartctl --scan output."""
+-
+-    @property
+-    def type(self):
+-        return self.opts.type
+-
+-    @property
+-    def base_labels(self):
+-        return {'disk': self.path}
+-
+-    def smartctl_select(self):
+-        return ['--device', self.type, self.path]
+-
+-
+-def metric_key(metric, prefix=''):
+-    return '{prefix}{metric.name}'.format(prefix=prefix, metric=metric)
+-
+-
+-def metric_format(metric, prefix=''):
+-    key = metric_key(metric, prefix)
+-    labels = ','.join(
+-        '{k}="{v}"'.format(k=k, v=v) for k, v in metric.labels.items())
+-    value = decimal.Decimal(metric.value)
+-
+-    return '{key}{{{labels}}} {value}'.format(
+-        key=key, labels=labels, value=value)
+-
+-
+-def metric_print_meta(metric, prefix=''):
+-    key = metric_key(metric, prefix)
+-    print('# HELP {key} SMART metric {metric.name}'.format(
+-        key=key, metric=metric))
+-    print('# TYPE {key} gauge'.format(key=key, metric=metric))
+-
+-
+-def metric_print(metric, prefix=''):
+-    print(metric_format(metric, prefix))
+-
+-
+-def smart_ctl(*args, check=True):
+-    """Wrapper around invoking the smartctl binary.
+-
+-    Returns:
+-        (str) Data piped to stdout by the smartctl subprocess.
+-    """
+-    try:
+-        return subprocess.run(
+-            ['smartctl', *args], stdout=subprocess.PIPE, check=check
+-        ).stdout.decode('utf-8')
+-    except subprocess.CalledProcessError as e:
+-        return e.output.decode('utf-8')
+-
+-def smart_ctl_version():
+-    return smart_ctl('-V').split('\n')[0].split()[1]
+-
+-
+-def find_devices():
+-    """Find SMART devices.
+-
+-    Yields:
+-        (Device) Single device found by smartctl.
+-    """
+-    parser = argparse.ArgumentParser()
+-    parser.add_argument('-d', '--device', dest='type')
+-
+-    devices = smart_ctl('--scan-open')
+-
+-    for device in devices.split('\n'):
+-        device = device.strip()
+-        if not device:
+-            continue
+-
+-        tokens = shlex.split(device, comments=True)
+-        if not tokens:
+-            continue
+-
+-        yield Device(tokens[0], parser.parse_args(tokens[1:]))
+-
+-
+-def device_is_active(device):
+-    """Returns whenever the given device is currently active or not.
+-
+-    Args:
+-        device: (Device) Device in question.
+-
+-    Returns:
+-        (bool) True if the device is active and False otherwise.
+-    """
+-    try:
+-        smart_ctl('--nocheck', 'standby', *device.smartctl_select())
+-    except subprocess.CalledProcessError:
+-        return False
+-
+-    return True
+-
+-
+-def device_info(device):
+-    """Query device for basic model information.
+-
+-    Args:
+-        device: (Device) Device in question.
+-
+-    Returns:
+-        (generator): Generator yielding:
+-
+-            key (str): Key describing the value.
+-            value (str): Actual value.
+-    """
+-    info_lines = smart_ctl(
+-        '--info', *device.smartctl_select()
+-    ).strip().split('\n')[3:]
+-
+-    matches = (device_info_re.match(l) for l in info_lines)
+-    return (m.groups() for m in matches if m is not None)
+-
+-
+-def device_smart_capabilities(device):
+-    """Returns SMART capabilities of the given device.
+-
+-    Args:
+-        device: (Device) Device in question.
+-
+-    Returns:
+-        (tuple): tuple containing:
+-
+-            (bool): True whenever SMART is available, False otherwise.
+-            (bool): True whenever SMART is enabled, False otherwise.
+-    """
+-    groups = device_info(device)
+-
+-    state = {
+-        g[1].split(' ', 1)[0]
+-        for g in groups if g[0] == 'SMART support'}
+-
+-    smart_available = 'Available' in state
+-    smart_enabled = 'Enabled' in state
+-
+-    return smart_available, smart_enabled
+-
+-
+-def collect_device_info(device):
+-    """Collect basic device information.
+-
+-    Args:
+-        device: (Device) Device in question.
+-
+-    Yields:
+-        (Metric) metrics describing general device information.
+-    """
+-    values = dict(device_info(device))
+-    yield Metric('device_info', {
+-        **device.base_labels,
+-        **{v: values[k] for k, v in device_info_map.items() if k in values}
+-    }, True)
+-
+-
+-def collect_device_health_self_assessment(device):
+-    """Collect metric about the device health self assessment.
+-
+-    Args:
+-        device: (Device) Device in question.
+-
+-    Yields:
+-        (Metric) Device health self assessment.
+-    """
+-    out = smart_ctl('--health', *device.smartctl_select())
+-
+-    if self_test_re.search(out):
+-        self_assessment_passed = True
+-    else:
+-        self_assessment_passed = False
+-
+-    yield Metric(
+-        'device_smart_healthy', device.base_labels, self_assessment_passed)
+-
+-
+-def collect_ata_metrics(device):
+-    # Fetch SMART attributes for the given device.
+-    attributes = smart_ctl(
+-        '--attributes', *device.smartctl_select()
+-    )
+-
+-    # replace multiple occurrences of whitespace with a single whitespace
+-    # so that the CSV Parser recognizes individual columns properly.
+-    attributes = re.sub(r'[\t\x20]+', ' ', attributes)
+-
+-    # Turn smartctl output into a list of lines and skip to the table of
+-    # SMART attributes.
+-    attribute_lines = attributes.strip().split('\n')[7:]
+-
+-    reader = csv.DictReader(
+-        (l.strip() for l in attribute_lines),
+-        fieldnames=SmartAttribute._fields[:-1],
+-        restkey=SmartAttribute._fields[-1], delimiter=' ')
+-    for entry in reader:
+-        # We're only interested in the SMART attributes that are
+-        # whitelisted here.
+-        entry['name'] = entry['name'].lower()
+-        if entry['name'] not in smart_attributes_whitelist:
+-            continue
+-
+-        # Ensure that only the numeric parts are fetched from the raw_value.
+-        # Attributes such as 194 Temperature_Celsius reported by my SSD
+-        # are in the format of "36 (Min/Max 24/40)" which can't be expressed
+-        # properly as a prometheus metric.
+-        m = re.match('^(\d+)', ' '.join(entry['raw_value']))
+-        if not m:
+-            continue
+-        entry['raw_value'] = m.group(1)
+-
+-        if entry['name'] in smart_attributes_whitelist:
+-            labels = {
+-                'name': entry['name'],
+-                **device.base_labels,
+-            }
+-
+-            for col in 'value', 'worst', 'threshold':
+-                yield Metric(
+-                    'attr_{col}'.format(name=entry["name"], col=col),
+-                    labels, entry[col])
+-
+-
+-def collect_ata_error_count(device):
+-    """Inspect the device error log and report the amount of entries.
+-
+-    Args:
+-        device: (Device) Device in question.
+-
+-    Yields:
+-        (Metric) Device error count.
+-    """
+-    error_log = smart_ctl(
+-        '-l', 'xerror,1', *device.smartctl_select(), check=False)
+-
+-    m = ata_error_count_re.search(error_log)
+-
+-    error_count = m.group(1) if m is not None else 0
+-
+-    yield Metric('device_errors', device.base_labels, error_count)
+-
+-
+-def collect_disks_smart_metrics():
+-    now = int(datetime.datetime.utcnow().timestamp())
+-
+-    for device in find_devices():
+-        yield Metric('smartctl_run', device.base_labels, now)
+-
+-        is_active = device_is_active(device)
+-
+-        yield Metric('device_active', device.base_labels, is_active)
+-
+-        # Skip further metrics collection to prevent the disk from
+-        # spinning up.
+-        if not is_active:
+-            continue
+-
+-        yield from collect_device_info(device)
+-
+-        smart_available, smart_enabled = device_smart_capabilities(device)
+-
+-        yield Metric(
+-            'device_smart_available', device.base_labels, smart_available)
+-        yield Metric(
+-            'device_smart_enabled', device.base_labels, smart_enabled)
+-
+-        # Skip further metrics collection here if SMART is disabled
+-        # on the device.  Further smartctl invocations would fail
+-        # anyways.
+-        if not smart_available:
+-            continue
+-
+-        yield from collect_device_health_self_assessment(device)
+-
+-        if device.type.startswith('sat'):
+-            yield from collect_ata_metrics(device)
+-
+-            yield from collect_ata_error_count(device)
+-
+-
+-def main():
+-    version_metric = Metric('smartctl_version', {
+-        'version': smart_ctl_version()
+-    }, True)
+-    metric_print_meta(version_metric, 'smartmon_')
+-    metric_print(version_metric, 'smartmon_')
+-
+-    metrics = list(collect_disks_smart_metrics())
+-    metrics.sort(key=lambda i: i.name)
+-
+-    previous_name = None
+-    for m in metrics:
+-        if m.name != previous_name:
+-            metric_print_meta(m, 'smartmon_')
+-
+-            previous_name = m.name
+-
+-        metric_print(m, 'smartmon_')
+-
+-if __name__ == '__main__':
+-    main()
+--- a/text_collector_examples/smartmon.sh	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,192 +0,0 @@
+-#!/bin/bash
+-# Script informed by the collectd monitoring script for smartmontools (using smartctl)
+-# by Samuel B. <samuel_._behan_(at)_dob_._sk> (c) 2012
+-# source at: http://devel.dob.sk/collectd-scripts/
+-
+-# TODO: This probably needs to be a little more complex.  The raw numbers can have more
+-#       data in them than you'd think.
+-#       http://arstechnica.com/civis/viewtopic.php?p=22062211
+-
+-# Formatting done via shfmt -i 2
+-# https://github.com/mvdan/sh
+-
+-parse_smartctl_attributes_awk="$(
+-  cat <<'SMARTCTLAWK'
+-$1 ~ /^ *[0-9]+$/ && $2 ~ /^[a-zA-Z0-9_-]+$/ {
+-  gsub(/-/, "_");
+-  printf "%s_value{%s,smart_id=\"%s\"} %d\n", $2, labels, $1, $4
+-  printf "%s_worst{%s,smart_id=\"%s\"} %d\n", $2, labels, $1, $5
+-  printf "%s_threshold{%s,smart_id=\"%s\"} %d\n", $2, labels, $1, $6
+-  printf "%s_raw_value{%s,smart_id=\"%s\"} %e\n", $2, labels, $1, $10
+-}
+-SMARTCTLAWK
+-)"
+-
+-smartmon_attrs="$(
+-  cat <<'SMARTMONATTRS'
+-airflow_temperature_cel
+-command_timeout
+-current_pending_sector
+-end_to_end_error
+-erase_fail_count
+-g_sense_error_rate
+-hardware_ecc_recovered
+-host_reads_mib
+-host_reads_32mib
+-host_writes_mib
+-host_writes_32mib
+-load_cycle_count
+-media_wearout_indicator
+-wear_leveling_count
+-nand_writes_1gib
+-offline_uncorrectable
+-power_cycle_count
+-power_on_hours
+-program_fail_count
+-raw_read_error_rate
+-reallocated_event_count
+-reallocated_sector_ct
+-reported_uncorrect
+-sata_downshift_count
+-seek_error_rate
+-spin_retry_count
+-spin_up_time
+-start_stop_count
+-temperature_case
+-temperature_celsius
+-temperature_internal
+-total_lbas_read
+-total_lbas_written
+-udma_crc_error_count
+-unsafe_shutdown_count
+-workld_host_reads_perc
+-workld_media_wear_indic
+-workload_minutes
+-SMARTMONATTRS
+-)"
+-smartmon_attrs="$(echo ${smartmon_attrs} | xargs | tr ' ' '|')"
+-
+-parse_smartctl_attributes() {
+-  local disk="$1"
+-  local disk_type="$2"
+-  local labels="disk=\"${disk}\",type=\"${disk_type}\""
+-  local vars="$(echo "${smartmon_attrs}" | xargs | tr ' ' '|')"
+-  sed 's/^ \+//g' |
+-    awk -v labels="${labels}" "${parse_smartctl_attributes_awk}" 2>/dev/null |
+-    tr A-Z a-z |
+-    grep -E "(${smartmon_attrs})"
+-}
+-
+-parse_smartctl_scsi_attributes() {
+-  local disk="$1"
+-  local disk_type="$2"
+-  local labels="disk=\"${disk}\",type=\"${disk_type}\""
+-  while read line; do
+-    attr_type="$(echo "${line}" | tr '=' ':' | cut -f1 -d: | sed 's/^ \+//g' | tr ' ' '_')"
+-    attr_value="$(echo "${line}" | tr '=' ':' | cut -f2 -d: | sed 's/^ \+//g')"
+-    case "${attr_type}" in
+-    number_of_hours_powered_up_) power_on="$(echo "${attr_value}" | awk '{ printf "%e\n", $1 }')" ;;
+-    Current_Drive_Temperature) temp_cel="$(echo ${attr_value} | cut -f1 -d' ' | awk '{ printf "%e\n", $1 }')" ;;
+-    Blocks_read_from_cache_and_sent_to_initiator_) lbas_read="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
+-    Accumulated_start-stop_cycles) power_cycle="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
+-    Elements_in_grown_defect_list) grown_defects="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
+-    esac
+-  done
+-  [ ! -z "$power_on" ] && echo "power_on_hours_raw_value{${labels},smart_id=\"9\"} ${power_on}"
+-  [ ! -z "$temp_cel" ] && echo "temperature_celsius_raw_value{${labels},smart_id=\"194\"} ${temp_cel}"
+-  [ ! -z "$lbas_read" ] && echo "total_lbas_read_raw_value{${labels},smart_id=\"242\"} ${lbas_read}"
+-  [ ! -z "$power_cycle" ] && echo "power_cycle_count_raw_value{${labels},smart_id=\"12\"} ${power_cycle}"
+-  [ ! -z "$grown_defects" ] && echo "grown_defects_count_raw_value{${labels},smart_id=\"12\"} ${grown_defects}"
+-}
+-
+-parse_smartctl_info() {
+-  local -i smart_available=0 smart_enabled=0 smart_healthy=0
+-  local disk="$1" disk_type="$2"
+-  local model_family='' device_model='' serial_number='' fw_version='' vendor='' product='' revision='' lun_id=''
+-  while read line; do
+-    info_type="$(echo "${line}" | cut -f1 -d: | tr ' ' '_')"
+-    info_value="$(echo "${line}" | cut -f2- -d: | sed 's/^ \+//g' | sed 's/"/\\"/')"
+-    case "${info_type}" in
+-    Model_Family) model_family="${info_value}" ;;
+-    Device_Model) device_model="${info_value}" ;;
+-    Serial_Number) serial_number="${info_value}" ;;
+-    Firmware_Version) fw_version="${info_value}" ;;
+-    Vendor) vendor="${info_value}" ;;
+-    Product) product="${info_value}" ;;
+-    Revision) revision="${info_value}" ;;
+-    Logical_Unit_id) lun_id="${info_value}" ;;
+-    esac
+-    if [[ "${info_type}" == 'SMART_support_is' ]]; then
+-      case "${info_value:0:7}" in
+-      Enabled) smart_enabled=1 ;;
+-      Availab) smart_available=1 ;;
+-      Unavail) smart_available=0 ;;
+-      esac
+-    fi
+-    if [[ "${info_type}" == 'SMART_overall-health_self-assessment_test_result' ]]; then
+-      case "${info_value:0:6}" in
+-      PASSED) smart_healthy=1 ;;
+-      esac
+-    elif [[ "${info_type}" == 'SMART_Health_Status' ]]; then
+-      case "${info_value:0:2}" in
+-      OK) smart_healthy=1 ;;
+-      esac
+-    fi
+-  done
+-  echo "device_info{disk=\"${disk}\",type=\"${disk_type}\",vendor=\"${vendor}\",product=\"${product}\",revision=\"${revision}\",lun_id=\"${lun_id}\",model_family=\"${model_family}\",device_model=\"${device_model}\",serial_number=\"${serial_number}\",firmware_version=\"${fw_version}\"} 1"
+-  echo "device_smart_available{disk=\"${disk}\",type=\"${disk_type}\"} ${smart_available}"
+-  echo "device_smart_enabled{disk=\"${disk}\",type=\"${disk_type}\"} ${smart_enabled}"
+-  echo "device_smart_healthy{disk=\"${disk}\",type=\"${disk_type}\"} ${smart_healthy}"
+-}
+-
+-output_format_awk="$(
+-  cat <<'OUTPUTAWK'
+-BEGIN { v = "" }
+-v != $1 {
+-  print "# HELP smartmon_" $1 " SMART metric " $1;
+-  print "# TYPE smartmon_" $1 " gauge";
+-  v = $1
+-}
+-{print "smartmon_" $0}
+-OUTPUTAWK
+-)"
+-
+-format_output() {
+-  sort |
+-    awk -F'{' "${output_format_awk}"
+-}
+-
+-smartctl_version="$(/usr/sbin/smartctl -V | head -n1 | awk '$1 == "smartctl" {print $2}')"
+-
+-echo "smartctl_version{version=\"${smartctl_version}\"} 1" | format_output
+-
+-if [[ "$(expr "${smartctl_version}" : '\([0-9]*\)\..*')" -lt 6 ]]; then
+-  exit
+-fi
+-
+-device_list="$(/usr/sbin/smartctl --scan-open | awk '/^\/dev/{print $1 "|" $3}')"
+-
+-for device in ${device_list}; do
+-  disk="$(echo ${device} | cut -f1 -d'|')"
+-  type="$(echo ${device} | cut -f2 -d'|')"
+-  active=1
+-  echo "smartctl_run{disk=\"${disk}\",type=\"${type}\"}" "$(TZ=UTC date '+%s')"
+-  # Check if the device is in a low-power mode
+-  /usr/sbin/smartctl -n standby -d "${type}" "${disk}" > /dev/null || active=0
+-  echo "device_active{disk=\"${disk}\",type=\"${type}\"}" "${active}"
+-  # Skip further metrics to prevent the disk from spinning up
+-  test ${active} -eq 0 && continue
+-  # Get the SMART information and health
+-  /usr/sbin/smartctl -i -H -d "${type}" "${disk}" | parse_smartctl_info "${disk}" "${type}"
+-  # Get the SMART attributes
+-  case ${type} in
+-  sat) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_attributes "${disk}" "${type}" ;;
+-  sat+megaraid*) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_attributes "${disk}" "${type}" ;;
+-  scsi) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_scsi_attributes "${disk}" "${type}" ;;
+-  megaraid*) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_scsi_attributes "${disk}" "${type}" ;;
+-  *)
+-    echo "disk type is not sat, scsi or megaraid but ${type}"
+-    exit
+-    ;;
+-  esac
+-done | format_output
+--- a/text_collector_examples/storcli.py	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,233 +0,0 @@
+-#!/usr/bin/env python3
+-"""
+-Script to parse StorCLI's JSON output and expose
+-MegaRAID health as Prometheus metrics.
+-
+-Tested against StorCLI 'Ver 1.14.12 Nov 25, 2014'.
+-
+-StorCLI reference manual:
+-http://docs.avagotech.com/docs/12352476
+-
+-Advanced Software Options (ASO) not exposed as metrics currently.
+-
+-JSON key abbreviations used by StorCLI are documented in the standard command
+-output, i.e.  when you omit the trailing 'J' from the command.
+-
+-Formatting done with YAPF:
+-$ yapf -i --style '{COLUMN_LIMIT: 99}' storcli.py
+-"""
+-
+-from __future__ import print_function
+-from datetime import datetime
+-import argparse
+-import collections
+-import json
+-import os
+-import shlex
+-import subprocess
+-
+-DESCRIPTION = """Parses StorCLI's JSON output and exposes MegaRAID health as
+-    Prometheus metrics."""
+-VERSION = '0.0.3'
+-
+-storcli_path = ''
+-metric_prefix = 'megaraid_'
+-metric_list = {}
+-metric_list = collections.defaultdict(list)
+-
+-
+-def main(args):
+-    """ main """
+-    global storcli_path
+-    storcli_path = args.storcli_path
+-    data = get_storcli_json('/cALL show all J')
+-
+-    try:
+-        # All the information is collected underneath the Controllers key
+-        data = data['Controllers']
+-
+-        for controller in data:
+-            response = controller['Response Data']
+-            if response['Version']['Driver Name'] == 'megaraid_sas':
+-                handle_megaraid_controller(response)
+-            elif response['Version']['Driver Name'] == 'mpt3sas':
+-                handle_sas_controller(response)
+-    except KeyError:
+-        pass
+-
+-    print_all_metrics(metric_list)
+-
+-
+-def handle_sas_controller(response):
+-    (controller_index, baselabel) = get_basic_controller_info(response)
+-    add_metric('healthy', baselabel, int(response['Status']['Controller Status'] == 'OK'))
+-    add_metric('ports', baselabel, response['HwCfg']['Backend Port Count'])
+-    try:
+-        # The number of physical disks is half of the number of items in this dict
+-        # Every disk is listed twice - once for basic info, again for detailed info
+-        add_metric('physical_drives', baselabel,
+-                   len(response['Physical Device Information'].keys()) / 2)
+-    except AttributeError:
+-        pass
+-    # Split up string to not trigger CodeSpell issues
+-    add_metric('temperature', baselabel,
+-               int(response['HwCfg']['ROC temperature(Degree Celc' + 'ius)']))
+-    for key, basic_disk_info in response['Physical Device Information'].items():
+-        if 'Detailed Information' in key:
+-            continue
+-        create_metrcis_of_physical_drive(basic_disk_info[0],
+-                                         response['Physical Device Information'], controller_index)
+-
+-
+-def handle_megaraid_controller(response):
+-    (controller_index, baselabel) = get_basic_controller_info(response)
+-
+-    # BBU Status Optimal value is 0 for cachevault and 32 for BBU
+-    add_metric('battery_backup_healthy', baselabel,
+-               int(response['Status']['BBU Status'] in [0, 32]))
+-    add_metric('degraded', baselabel, int(response['Status']['Controller Status'] == 'Degraded'))
+-    add_metric('failed', baselabel, int(response['Status']['Controller Status'] == 'Failed'))
+-    add_metric('healthy', baselabel, int(response['Status']['Controller Status'] == 'Optimal'))
+-    add_metric('drive_groups', baselabel, response['Drive Groups'])
+-    add_metric('virtual_drives', baselabel, response['Virtual Drives'])
+-    add_metric('physical_drives', baselabel, response['Physical Drives'])
+-    add_metric('ports', baselabel, response['HwCfg']['Backend Port Count'])
+-    add_metric('scheduled_patrol_read', baselabel,
+-               int('hrs' in response['Scheduled Tasks']['Patrol Read Reoccurrence']))
+-    add_metric('temperature', baselabel, int(response['HwCfg']['ROC temperature(Degree Celsius)']))
+-    for cvidx, cvinfo in enumerate(response['Cachevault_Info']):
+-        add_metric('cv_temperature', baselabel + ',cvidx="' + str(cvidx) + '"', int(cvinfo['Temp'].replace('C','')))
+-
+-    time_difference_seconds = -1
+-    system_time = datetime.strptime(response['Basics'].get('Current System Date/time'),
+-                                    "%m/%d/%Y, %H:%M:%S")
+-    controller_time = datetime.strptime(response['Basics'].get('Current Controller Date/Time'),
+-                                        "%m/%d/%Y, %H:%M:%S")
+-    if system_time and controller_time:
+-        time_difference_seconds = abs(system_time - controller_time).seconds
+-        add_metric('time_difference', baselabel, time_difference_seconds)
+-
+-    for virtual_drive in response['VD LIST']:
+-        vd_position = virtual_drive.get('DG/VD')
+-        drive_group, volume_group = -1, -1
+-        if vd_position:
+-            drive_group = vd_position.split('/')[0]
+-            volume_group = vd_position.split('/')[1]
+-        vd_baselabel = 'controller="{}",DG="{}",VG="{}"'.format(controller_index, drive_group,
+-                                                                volume_group)
+-        vd_info_label = vd_baselabel + ',name="{}",cache="{}",type="{}",state="{}"'.format(
+-            str(virtual_drive.get('Name')).strip(),
+-            str(virtual_drive.get('Cache')).strip(),
+-            str(virtual_drive.get('TYPE')).strip(),
+-            str(virtual_drive.get('State')).strip())
+-        add_metric('vd_info', vd_info_label, 1)
+-
+-    if response['Physical Drives'] > 0:
+-        data = get_storcli_json('/cALL/eALL/sALL show all J')
+-        drive_info = data['Controllers'][controller_index]['Response Data']
+-    for physical_drive in response['PD LIST']:
+-        create_metrcis_of_physical_drive(physical_drive, drive_info, controller_index)
+-
+-
+-def get_basic_controller_info(response):
+-    controller_index = response['Basics']['Controller']
+-    baselabel = 'controller="{}"'.format(controller_index)
+-
+-    controller_info_label = baselabel + ',model="{}",serial="{}",fwversion="{}"'.format(
+-        str(response['Basics']['Model']).strip(),
+-        str(response['Basics']['Serial Number']).strip(),
+-        str(response['Version']['Firmware Version']).strip(),
+-    )
+-    add_metric('controller_info', controller_info_label, 1)
+-
+-    return (controller_index, baselabel)
+-
+-
+-def create_metrcis_of_physical_drive(physical_drive, detailed_info_array, controller_index):
+-    enclosure = physical_drive.get('EID:Slt').split(':')[0]
+-    slot = physical_drive.get('EID:Slt').split(':')[1]
+-
+-    pd_baselabel = 'controller="{}",enclosure="{}",slot="{}"'.format(controller_index, enclosure,
+-                                                                     slot)
+-    pd_info_label = pd_baselabel + \
+-        ',disk_id="{}",interface="{}",media="{}",model="{}",DG="{}",state="{}"'.format(
+-            str(physical_drive.get('DID')).strip(),
+-            str(physical_drive.get('Intf')).strip(),
+-            str(physical_drive.get('Med')).strip(),
+-            str(physical_drive.get('Model')).strip(),
+-            str(physical_drive.get('DG')).strip(),
+-            str(physical_drive.get('State')).strip())
+-
+-    drive_identifier = 'Drive /c' + str(controller_index) + '/e' + str(enclosure) + '/s' + str(
+-        slot)
+-    if enclosure == ' ':
+-        drive_identifier = 'Drive /c' + str(controller_index) + '/s' + str(slot)
+-    try:
+-        info = detailed_info_array[drive_identifier + ' - Detailed Information']
+-        state = info[drive_identifier + ' State']
+-        attributes = info[drive_identifier + ' Device attributes']
+-        settings = info[drive_identifier + ' Policies/Settings']
+-
+-        add_metric('pd_shield_counter', pd_baselabel, state['Shield Counter'])
+-        add_metric('pd_media_errors', pd_baselabel, state['Media Error Count'])
+-        add_metric('pd_other_errors', pd_baselabel, state['Other Error Count'])
+-        add_metric('pd_predictive_errors', pd_baselabel, state['Predictive Failure Count'])
+-        add_metric('pd_smart_alerted', pd_baselabel,
+-                   int(state['S.M.A.R.T alert flagged by drive'] == 'Yes'))
+-        add_metric('pd_link_speed_gbps', pd_baselabel, attributes['Link Speed'].split('.')[0])
+-        add_metric('pd_device_speed_gbps', pd_baselabel, attributes['Device Speed'].split('.')[0])
+-        add_metric('pd_commissioned_spare', pd_baselabel,
+-                   int(settings['Commissioned Spare'] == 'Yes'))
+-        add_metric('pd_emergency_spare', pd_baselabel, int(settings['Emergency Spare'] == 'Yes'))
+-        pd_info_label += ',firmware="{}"'.format(attributes['Firmware Revision'].strip())
+-    except KeyError:
+-        pass
+-    add_metric('pd_info', pd_info_label, 1)
+-
+-
+-def add_metric(name, labels, value):
+-    global metric_list
+-    try:
+-        metric_list[name].append({
+-            'labels': labels,
+-            'value': float(value),
+-        })
+-    except ValueError:
+-        pass
+-
+-
+-def print_all_metrics(metrics):
+-    for metric, measurements in metrics.items():
+-        print('# HELP {}{} MegaRAID {}'.format(metric_prefix, metric, metric.replace('_', ' ')))
+-        print('# TYPE {}{} gauge'.format(metric_prefix, metric))
+-        for measurement in measurements:
+-            if measurement['value'] != 'Unknown':
+-                print('{}{}{} {}'.format(metric_prefix, metric, '{' + measurement['labels'] + '}',
+-                                         measurement['value']))
+-
+-
+-def get_storcli_json(storcli_args):
+-    """Get storcli output in JSON format."""
+-    # Check if storcli is installed and executable
+-    if not (os.path.isfile(storcli_path) and os.access(storcli_path, os.X_OK)):
+-        SystemExit(1)
+-    storcli_cmd = shlex.split(storcli_path + ' ' + storcli_args)
+-    proc = subprocess.Popen(
+-        storcli_cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+-    output_json = proc.communicate()[0]
+-    data = json.loads(output_json.decode("utf-8"))
+-
+-    if data["Controllers"][0]["Command Status"]["Status"] != "Success":
+-        SystemExit(1)
+-    return data
+-
+-
+-if __name__ == "__main__":
+-    PARSER = argparse.ArgumentParser(
+-        description=DESCRIPTION, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+-    PARSER.add_argument(
+-        '--storcli_path', default='/opt/MegaRAID/storcli/storcli64', help='path to StorCLi binary')
+-    PARSER.add_argument('--version', action='version', version='%(prog)s {}'.format(VERSION))
+-    ARGS = PARSER.parse_args()
+-
+-    main(ARGS)
+--- a/text_collector_examples/yum.sh	2020-01-27 12:16:20.495756158 +0100
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,18 +0,0 @@
+-#!/bin/bash
+-#
+-# Description: Expose metrics from yum updates.
+-#
+-# Author: Slawomir Gonet <slawek@otwiera.cz>
+-# 
+-# Based on apt.sh by Ben Kochie <superq@gmail.com>
+-
+-upgrades=$(/usr/bin/yum -q check-updates | awk 'BEGIN { mute=1 } /Obsoleting Packages/ { mute=0 } mute { print }' | egrep '^\w+\.\w+' | awk '{print $3}' | sort | uniq -c | awk '{print "yum_upgrades_pending{origin=\""$2"\"} "$1}')
+-
+-echo '# HELP yum_upgrades_pending Yum package pending updates by origin.'
+-echo '# TYPE yum_upgrades_pending gauge'
+-if [[ -n "${upgrades}" ]] ; then
+-  echo "${upgrades}"
+-else
+-  echo 'yum_upgrades_pending{origin=""} 0'
+-fi
+-
