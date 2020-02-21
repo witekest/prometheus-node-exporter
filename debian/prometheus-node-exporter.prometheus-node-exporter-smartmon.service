@@ -1,7 +1,0 @@
-[Unit]
-Description=Collect SMART metrics for prometheus-node-exporter
-
-[Service]
-Type=oneshot
-Environment=TMPDIR=/var/lib/prometheus/node-exporter
-ExecStart=/bin/bash -c "/usr/share/prometheus-node-exporter/smartmon.sh | sponge /var/lib/prometheus/node-exporter/smartmon.prom"

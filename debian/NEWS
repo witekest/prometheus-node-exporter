@@ -1,3 +1,16 @@
+prometheus-node-exporter (0.18.1+ds-2) unstable; urgency=medium
+
+  This release removes the bundled textfile collector example scripts, since
+  they have been moved to an alternate upstream git repository. The scripts
+  and their associated systemd services / timers have been moved to the new
+  Debian package, prometheus-node-exporter-collectors.
+
+  If you have apt configured to not install "Recommends" package dependencies,
+  you will need to install the new prometheus-node-exporter-collectors package
+  manually.
+
+ -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Mon, 27 Jan 2020 11:28:47 +0100
+
 prometheus-node-exporter (0.16.0+ds-1) unstable; urgency=medium
 
   Breaking changes

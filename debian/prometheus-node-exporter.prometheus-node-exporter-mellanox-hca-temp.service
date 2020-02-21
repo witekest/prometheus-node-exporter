@@ -1,7 +1,0 @@
-[Unit]
-Description=Collect Mellanox HCA temperatures for prometheus-node-exporter
-
-[Service]
-Type=oneshot
-Environment=TMPDIR=/var/lib/prometheus/node-exporter
-ExecStart=/bin/sh -c "/usr/share/prometheus-node-exporter/mellanox_hca_temp | sponge /var/lib/prometheus/node-exporter/mellanox_hca_temp.prom"

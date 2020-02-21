@@ -1,10 +1,15 @@
 prometheus-node-exporter (0.18.1+ds-2) UNRELEASED; urgency=medium
 
+  [ Daniel Swarbrick ]
+  * Move bundled textfile collector example scripts and their associated
+    systemd services / timers to new prometheus-node-exporter-collectors
+    package.
+
   [ Sven Hoexter ]
   * Add 05-apt-label-parsing.patch, to handle spaces in repository
     label correctly. Picked from the upstream repository. Closes: #935167
 
- -- Sven Hoexter <hoexter@debian.org>  Wed, 21 Aug 2019 10:39:52 +0200
+ -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Mon, 27 Jan 2020 11:28:47 +0100
 
 prometheus-node-exporter (0.18.1+ds-1) unstable; urgency=medium
 
