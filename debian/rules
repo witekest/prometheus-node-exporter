@@ -27,7 +27,7 @@ BUILDFLAGS  = -tags "$(BUILDTAGS)" -ldflags \
             --builddirectory=$(BUILDDIR)
 
 # ZFS (or its tests) are not working in 32-bit arches.
-DEB_HOST_ARCH_BITS := $(shell dpkg-architecture -qDEB_HOST_ARCH_BITS)
+include /usr/share/dpkg/architecture.mk
 ifeq ($(DEB_HOST_ARCH_BITS),32)
 BUILDTAGS += nozfs
 endif
