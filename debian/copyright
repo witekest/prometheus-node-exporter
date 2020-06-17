@@ -26,8 +26,14 @@ License: Expat
 Comment: Included in the repackaged source, as it does not seem to deserve a
  separate package.
 
-Files: vendor/github.com/hodgesds/*
+Files: vendor/github.com/hodgesds/perf-utils/*
 Copyright: 2019 Daniel Hodges
+License: MIT
+Comment: Included in the repackaged source, as it does not seem to deserve a
+ separate package.
+
+Files: vendor/github.com/mattn/go-xmlrpc/*
+Copyright: 2011 Yasuhiro Matsumoto
 License: MIT
 Comment: Included in the repackaged source, as it does not seem to deserve a
  separate package.
