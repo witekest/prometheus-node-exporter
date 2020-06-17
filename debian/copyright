@@ -20,18 +20,6 @@ License: BSD-2-clause
 Comment: Included in the repackaged source, as it does not seem to deserve a
  separate package.
 
-Files: vendor/github.com/soundcloud/go-runit/*
-Copyright: 2015 SoundCloud Ltd.
-License: Expat
-Comment: Included in the repackaged source, as it does not seem to deserve a
- separate package.
-
-Files: vendor/github.com/mdlayher/*
-Copyright: 2016 Matt Layher
-License: Expat
-Comment: Included in the repackaged source, as it does not seem to deserve a
- separate package.
-
 Files: vendor/github.com/ema/qdisc/*
 Copyright: 2017 Emanuele Rocca
 License: Expat
@@ -41,6 +29,18 @@ Comment: Included in the repackaged source, as it does not seem to deserve a
 Files: vendor/github.com/hodgesds/*
 Copyright: 2019 Daniel Hodges
 License: MIT
+Comment: Included in the repackaged source, as it does not seem to deserve a
+ separate package.
+
+Files: vendor/github.com/mdlayher/*
+Copyright: 2016 Matt Layher
+License: Expat
+Comment: Included in the repackaged source, as it does not seem to deserve a
+ separate package.
+
+Files: vendor/github.com/soundcloud/go-runit/*
+Copyright: 2015 SoundCloud Ltd.
+License: Expat
 Comment: Included in the repackaged source, as it does not seem to deserve a
  separate package.
 
