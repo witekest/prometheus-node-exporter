@@ -34,7 +34,7 @@ prometheus-node-exporter (0.16.0+ds-1) unstable; urgency=medium
   * The gmond collector has been removed.
   * The textfile collector will now treat timestamps as errors.
 
- -- Martín Ferrari <tincho@debian.org>  Wed, 13 Jun 2018 19:00:23 +0000
+ -- Martina Ferrari <tina@debian.org>  Wed, 13 Jun 2018 19:00:23 +0000
 
 prometheus-node-exporter (0.15.2+ds-1) unstable; urgency=medium
 
@@ -54,4 +54,4 @@ prometheus-node-exporter (0.15.2+ds-1) unstable; urgency=medium
   collector is now locked to localhost.  This is to avoid accidental spamming
   of public internet NTP pools.
 
- -- Martín Ferrari <tincho@debian.org>  Tue, 24 Oct 2017 06:13:51 +0000
+ -- Martina Ferrari <tina@debian.org>  Tue, 24 Oct 2017 06:13:51 +0000

@@ -51,7 +51,7 @@ Comment: Included in the repackaged source, as it does not seem to deserve a
  separate package.
 
 Files: debian/*
-Copyright: 2015 Martín Ferrari <tincho@tincho.org>
+Copyright: 2015 Martina Ferrari <tincho@tincho.org>
 License: Apache-2.0
 
 License: Apache-2.0

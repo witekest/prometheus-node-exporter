@@ -1,11 +1,11 @@
 Source: prometheus-node-exporter
-Maintainer: Debian Go Packaging Team <pkg-go-maintainers@lists.alioth.debian.org>
-Uploaders: Martín Ferrari <tincho@debian.org>,
+Maintainer: Debian Go Packaging Team <team+pkg-go@tracker.debian.org>
+Uploaders: Martina Ferrari <tina@debian.org>,
            Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>,
 Section: net
 Testsuite: autopkgtest-pkg-go
 Priority: optional
-Build-Depends: debhelper-compat (= 12),
+Build-Depends: debhelper-compat (= 13),
                dh-golang (>= 1.17~),
                golang-any,
                golang-dbus-dev,

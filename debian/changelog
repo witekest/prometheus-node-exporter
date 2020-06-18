@@ -1,6 +1,10 @@
 prometheus-node-exporter (1.0.1+ds-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Update debhelper-compat version to 13.
+  * Refresh patches.
+  * Drop obsolete patch 04-procfs.patch.
+  * Update maintainer email addresses / names.
 
  -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Thu, 18 Jun 2020 10:31:14 +0200
 
@@ -41,7 +45,7 @@ prometheus-node-exporter (0.17.0+ds-3) unstable; urgency=medium
   * Drop python from Recommends (All text collector script use Python 3 now)
   * Bump Standards-Version to 4.3.0 (no changes required)
 
-  [ Martín Ferrari ]
+  [ Martina Ferrari ]
   * Set TMPDIR so textfiles are created atomically. Closes: #920827.
   * Recommend dbus, as the systemd collector does not work without it.
 
@@ -52,7 +56,7 @@ prometheus-node-exporter (0.17.0+ds-2) unstable; urgency=medium
   * Use alternative solution for #916236, cherry-picked from upstream;
     thanks to Andre Heider for the patch.
 
- -- Martín Ferrari <tincho@debian.org>  Fri, 14 Dec 2018 14:09:27 +0000
+ -- Martina Ferrari <tina@debian.org>  Fri, 14 Dec 2018 14:09:27 +0000
 
 prometheus-node-exporter (0.17.0+ds-1) unstable; urgency=medium
 
@@ -60,13 +64,13 @@ prometheus-node-exporter (0.17.0+ds-1) unstable; urgency=medium
   * Ship a systemd service for the apt text collector. apt is checked for
     pending reboots and updated packages every 15 minutes.
 
-  [ Martín Ferrari ]
+  [ Martina Ferrari ]
   * New upstream release.
   * Refresh patches.
   * Update procfs dependency.
   * Avoid waking up disks unnecessarily. Closes: #916055
 
- -- Martín Ferrari <tincho@debian.org>  Thu, 13 Dec 2018 23:39:17 +0000
+ -- Martina Ferrari <tina@debian.org>  Thu, 13 Dec 2018 23:39:17 +0000
 
 prometheus-node-exporter (0.16.0+ds-2) unstable; urgency=medium
 
@@ -83,7 +87,7 @@ prometheus-node-exporter (0.16.0+ds-2) unstable; urgency=medium
   * Blacklist devices, slices, and targets by default in systemd
     collector.
 
-  [ Martín Ferrari ]
+  [ Martina Ferrari ]
   * Ignore /mnt and /media by default. Closes: #908811
   * debian/default: Update flag documentation.
   * debian/control: Add python and python3 to Recommends, for collector
@@ -91,7 +95,7 @@ prometheus-node-exporter (0.16.0+ds-2) unstable; urgency=medium
   * debian/rules: Check DEB_BUILD_OPTIONS before running tests.
   * Update Standards-Version with no changes.
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 15 Oct 2018 16:25:37 +0000
+ -- Martina Ferrari <tina@debian.org>  Mon, 15 Oct 2018 16:25:37 +0000
 
 prometheus-node-exporter (0.16.0+ds-1) unstable; urgency=medium
 
@@ -101,7 +105,7 @@ prometheus-node-exporter (0.16.0+ds-1) unstable; urgency=medium
   [ Michael Stapelberg ]
   * gbp.conf: set debian-branch
 
-  [ Martín Ferrari ]
+  [ Martina Ferrari ]
   * New upstream release. Closes: #900760.
   * Refresh patches.
   * Fix dependency version of x/sys (missing SOL_NETLINK).
@@ -120,7 +124,7 @@ prometheus-node-exporter (0.16.0+ds-1) unstable; urgency=medium
   * Bump Standards-Version (no changes).
   * debian/rules: Remove now unneeded workarounds.
 
- -- Martín Ferrari <tincho@debian.org>  Wed, 13 Jun 2018 19:00:23 +0000
+ -- Martina Ferrari <tina@debian.org>  Wed, 13 Jun 2018 19:00:23 +0000
 
 prometheus-node-exporter (0.15.2+ds-1) unstable; urgency=medium
 
@@ -137,14 +141,14 @@ prometheus-node-exporter (0.15.2+ds-1) unstable; urgency=medium
   * Stop using pristine-tar.
   * Remove unused lintian overrides.
 
- -- Martín Ferrari <tincho@debian.org>  Thu, 14 Dec 2017 15:26:08 +0000
+ -- Martina Ferrari <tina@debian.org>  Thu, 14 Dec 2017 15:26:08 +0000
 
 prometheus-node-exporter (0.14.0+ds-3) unstable; urgency=medium
 
   * Fix problem introduced by the combination of two flags (nozfs and mips*).
   * Fix test timing issue in slow arches.
 
- -- Martín Ferrari <tincho@debian.org>  Sat, 19 Aug 2017 11:34:09 +0000
+ -- Martina Ferrari <tina@debian.org>  Sat, 19 Aug 2017 11:34:09 +0000
 
 prometheus-node-exporter (0.14.0+ds-2) unstable; urgency=medium
 
@@ -155,7 +159,7 @@ prometheus-node-exporter (0.14.0+ds-2) unstable; urgency=medium
   * Disable the ZFS collector in 32-bit arches, until issue #629 is
     solved upstream.
 
- -- Martín Ferrari <tincho@debian.org>  Fri, 18 Aug 2017 09:36:40 +0000
+ -- Martina Ferrari <tina@debian.org>  Fri, 18 Aug 2017 09:36:40 +0000
 
 prometheus-node-exporter (0.14.0+ds-1) unstable; urgency=medium
 
@@ -169,7 +173,7 @@ prometheus-node-exporter (0.14.0+ds-1) unstable; urgency=medium
   * debian/control: Update dependency on procfs.
   * debian/gbp.conf: Add builder defaults.
 
- -- Martín Ferrari <tincho@debian.org>  Wed, 12 Jul 2017 00:54:52 +0000
+ -- Martina Ferrari <tina@debian.org>  Wed, 12 Jul 2017 00:54:52 +0000
 
 prometheus-node-exporter (0.13.0+ds-1) unstable; urgency=medium
 
@@ -177,7 +181,7 @@ prometheus-node-exporter (0.13.0+ds-1) unstable; urgency=medium
   * Work around gccgo inability to handle vendor directory.
   * Fix build for arches not contemplated upstream.
 
- -- Martín Ferrari <tincho@debian.org>  Sat, 14 Jan 2017 05:38:44 -0300
+ -- Martina Ferrari <tina@debian.org>  Sat, 14 Jan 2017 05:38:44 -0300
 
 prometheus-node-exporter (0.13.0~rc.2+ds-1) unstable; urgency=medium
 
@@ -185,7 +189,7 @@ prometheus-node-exporter (0.13.0~rc.2+ds-1) unstable; urgency=medium
   * Team upload.
   * Use a secure transport for the Vcs-Git and Vcs-Browser URL
 
-  [ Martín Ferrari ]
+  [ Martina Ferrari ]
   * Actually use https for Vcs-Browser.
   * Filter out /(sys|proc|dev|run) filesystems by default.
   * debian/default: Add escapes in multiline variable. Closes: #840947.
@@ -193,7 +197,7 @@ prometheus-node-exporter (0.13.0~rc.2+ds-1) unstable; urgency=medium
   * New upstream release.
   * Update available parameters.
 
- -- Martín Ferrari <tincho@debian.org>  Sat, 19 Nov 2016 17:28:35 +0000
+ -- Martina Ferrari <tina@debian.org>  Sat, 19 Nov 2016 17:28:35 +0000
 
 prometheus-node-exporter (0.12.0+ds+really0.12.0-2) unstable; urgency=medium
 
@@ -206,7 +210,7 @@ prometheus-node-exporter (0.12.0+ds+really0.12.0-2) unstable; urgency=medium
   * Enable the textfile collector by default.
   * Remove rotated logs and textfile directory on purge.
 
- -- Martín Ferrari <tincho@debian.org>  Thu, 30 Jun 2016 13:30:21 +0000
+ -- Martina Ferrari <tina@debian.org>  Thu, 30 Jun 2016 13:30:21 +0000
 
 prometheus-node-exporter (0.12.0+ds+really0.12.0-1) unstable; urgency=medium
 
@@ -221,13 +225,13 @@ prometheus-node-exporter (0.12.0+ds+really0.12.0-1) unstable; urgency=medium
     - Update Standards-Version with no changes.
   * debian/rules: Fix gen-orig-tgz target.
 
- -- Martín Ferrari <tincho@debian.org>  Fri, 06 May 2016 19:02:38 +0000
+ -- Martina Ferrari <tina@debian.org>  Fri, 06 May 2016 19:02:38 +0000
 
 prometheus-node-exporter (0.12.0+ds-2) unstable; urgency=medium
 
   * Fix builds on arm64.
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 25 Jan 2016 16:58:35 -0300
+ -- Martina Ferrari <tina@debian.org>  Mon, 25 Jan 2016 16:58:35 -0300
 
 prometheus-node-exporter (0.12.0+ds-1) unstable; urgency=medium
 
@@ -236,20 +240,20 @@ prometheus-node-exporter (0.12.0+ds-1) unstable; urgency=medium
   * Add new dependency on golang-github-prometheus-common-dev, and update
     patches.
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 11 Jan 2016 19:29:42 +0000
+ -- Martina Ferrari <tina@debian.org>  Mon, 11 Jan 2016 19:29:42 +0000
 
 prometheus-node-exporter (0.11.0+ds-1) unstable; urgency=medium
 
   * New upstream release.
 
- -- Martín Ferrari <tincho@debian.org>  Thu, 03 Sep 2015 15:35:33 +0300
+ -- Martina Ferrari <tina@debian.org>  Thu, 03 Sep 2015 15:35:33 +0300
 
 prometheus-node-exporter (0.10.0+ds-3) unstable; urgency=medium
 
   * debian/postrm: Do remove log and pid files.
   * debian/init: Fix description.
 
- -- Martín Ferrari <tincho@debian.org>  Tue, 07 Jul 2015 11:28:12 +0000
+ -- Martina Ferrari <tina@debian.org>  Tue, 07 Jul 2015 11:28:12 +0000
 
 prometheus-node-exporter (0.10.0+ds-2) unstable; urgency=medium
 
@@ -257,7 +261,7 @@ prometheus-node-exporter (0.10.0+ds-2) unstable; urgency=medium
   * debian/postrm: Do not remove directories forcefully, as these are shared
     with other prometheus tools.
 
- -- Martín Ferrari <tincho@debian.org>  Tue, 07 Jul 2015 07:30:20 +0000
+ -- Martina Ferrari <tina@debian.org>  Tue, 07 Jul 2015 07:30:20 +0000
 
 prometheus-node-exporter (0.10.0+ds-1) unstable; urgency=medium
 
@@ -266,4 +270,4 @@ prometheus-node-exporter (0.10.0+ds-1) unstable; urgency=medium
     deserve separate packages at this time: github.com/beevik/ntp and
     github.com/soundcloud/go-runit.
 
- -- Martín Ferrari <tincho@debian.org>  Mon, 06 Jul 2015 18:22:37 +0000
+ -- Martina Ferrari <tina@debian.org>  Mon, 06 Jul 2015 18:22:37 +0000

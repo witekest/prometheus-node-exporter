@@ -14,7 +14,7 @@ fi
 #                    with pluggable metric collectors.
 ### END INIT INFO
 
-# Author: Martín Ferrari <tincho@debian.org>
+# Author: Martina Ferrari <tina@debian.org>
 
 DESC="Prometheus exporter for machine metrics"
 DAEMON=/usr/bin/prometheus-node-exporter
