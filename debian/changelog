@@ -1,3 +1,9 @@
+prometheus-node-exporter (1.0.1+ds-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Thu, 18 Jun 2020 10:31:14 +0200
+
 prometheus-node-exporter (0.18.1+ds-2) unstable; urgency=medium
 
   [ Daniel Swarbrick ]
