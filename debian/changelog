@@ -1,9 +1,10 @@
 prometheus-node-exporter (1.0.1+ds-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Update Standards-Version to 4.5.0 (rename systemd service file and init
+    script).
   * Update debhelper-compat version to 13.
-  * Refresh patches.
-  * Drop obsolete patch 04-procfs.patch.
+  * Refresh patches, drop obsolete 04-procfs.patch.
   * Update maintainer email addresses / names.
 
  -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Thu, 18 Jun 2020 10:31:14 +0200
