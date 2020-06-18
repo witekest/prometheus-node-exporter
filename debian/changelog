@@ -1,4 +1,4 @@
-prometheus-node-exporter (1.0.1+ds-1) UNRELEASED; urgency=medium
+prometheus-node-exporter (1.0.1+ds-1) unstable; urgency=medium
 
   [ Daniel Swarbrick ]
   * New upstream release.
@@ -27,7 +27,7 @@ prometheus-node-exporter (1.0.1+ds-1) UNRELEASED; urgency=medium
   * Reformat defaults file. Closes: #953650
   * Add Pre-Depends as requested by lintian.
 
- -- Martina Ferrari <tina@debian.org>  Thu, 18 Jun 2020 21:57:31 +0000
+ -- Martina Ferrari <tina@debian.org>  Thu, 18 Jun 2020 22:00:01 +0000
 
 prometheus-node-exporter (0.18.1+ds-2) unstable; urgency=medium
 
