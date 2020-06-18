@@ -1,29 +1,29 @@
 Description: Set defaults that make sense for Debian systems.
 --- a/collector/netdev_common.go
 +++ b/collector/netdev_common.go
-@@ -26,7 +26,7 @@
+@@ -28,7 +28,7 @@
  )
  
  var (
--	netdevIgnoredDevices = kingpin.Flag("collector.netdev.ignored-devices", "Regexp of net devices to ignore for netdev collector.").Default("^$").String()
-+	netdevIgnoredDevices = kingpin.Flag("collector.netdev.ignored-devices", "Regexp of net devices to ignore for netdev collector.").Default("^lo$").String()
+-	netdevIgnoredDevices = kingpin.Flag("collector.netdev.device-blacklist", "Regexp of net devices to blacklist (mutually exclusive to device-whitelist).").String()
++	netdevIgnoredDevices = kingpin.Flag("collector.netdev.device-blacklist", "Regexp of net devices to blacklist (mutually exclusive to device-whitelist).").Default("^lo$").String()
+ 	netdevAcceptDevices  = kingpin.Flag("collector.netdev.device-whitelist", "Regexp of net devices to whitelist (mutually exclusive to device-blacklist).").String()
  )
  
- type netDevCollector struct {
 --- a/collector/filesystem_linux.go
 +++ b/collector/filesystem_linux.go
-@@ -29,7 +29,7 @@
+@@ -31,7 +31,7 @@
  )
  
  const (
 -	defIgnoredMountPoints = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
 +	defIgnoredMountPoints = "^/(dev|proc|run|sys|mnt|media|var/lib/docker/.+)($|/)"
- 	defIgnoredFSTypes     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
- 	mountTimeout          = 30 * time.Second
+ 	defIgnoredFSTypes     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
  )
+ 
 --- a/collector/textfile.go
 +++ b/collector/textfile.go
-@@ -32,7 +32,7 @@
+@@ -33,7 +33,7 @@
  )
  
  var (
@@ -34,16 +34,16 @@ Description: Set defaults that make sense for Debian systems.
  		"Unixtime mtime of textfiles successfully read.",
 --- a/collector/systemd_linux.go
 +++ b/collector/systemd_linux.go
-@@ -31,7 +31,7 @@
+@@ -40,7 +40,7 @@
  
  var (
  	unitWhitelist          = kingpin.Flag("collector.systemd.unit-whitelist", "Regexp of systemd units to whitelist. Units must both match whitelist and not match blacklist to be included.").Default(".+").String()
 -	unitBlacklist          = kingpin.Flag("collector.systemd.unit-blacklist", "Regexp of systemd units to blacklist. Units must both match whitelist and not match blacklist to be included.").Default(".+\\.(automount|device|mount|scope|slice)").String()
 +	unitBlacklist          = kingpin.Flag("collector.systemd.unit-blacklist", "Regexp of systemd units to blacklist. Units must both match whitelist and not match blacklist to be included.").Default(".+\\.(automount|device|mount|scope|slice|target)").String()
- 	systemdPrivate         = kingpin.Flag("collector.systemd.private", "Establish a private, direct connection to systemd without dbus.").Bool()
+ 	systemdPrivate         = kingpin.Flag("collector.systemd.private", "Establish a private, direct connection to systemd without dbus (Strongly discouraged since it requires root. For testing purposes only).").Hidden().Bool()
  	enableTaskMetrics      = kingpin.Flag("collector.systemd.enable-task-metrics", "Enables service unit tasks metrics unit_tasks_current and unit_tasks_max").Bool()
  	enableRestartsMetrics  = kingpin.Flag("collector.systemd.enable-restarts-metrics", "Enables service unit metric service_restart_total").Bool()
-@@ -57,7 +57,7 @@
+@@ -69,7 +69,7 @@
  var unitStatesName = []string{"active", "activating", "deactivating", "inactive", "failed"}
  
  func init() {
