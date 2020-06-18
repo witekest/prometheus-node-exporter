@@ -1,5 +1,6 @@
 prometheus-node-exporter (1.0.1+ds-1) UNRELEASED; urgency=medium
 
+  [ Daniel Swarbrick ]
   * New upstream release.
   * Update Standards-Version to 4.5.0 (rename systemd service file and init
     script).
@@ -10,8 +11,23 @@ prometheus-node-exporter (1.0.1+ds-1) UNRELEASED; urgency=medium
   * Drop unused build-dep golang-goprotobuf-dev.
   * Add new build-dep golang-golang-x-crypto-dev.
   * Add new build-dep golang-gopkg-yaml.v2-dev.
+  * d/copyright: List vendoring copyright exceptions alphabetically
+  * d/copyright: Refresh / add missing vendoring copyright exception
+  * d/upstream/metadata: Add Repository field
+  * Refresh /etc/defaults
 
- -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Thu, 18 Jun 2020 10:31:14 +0200
+  [ Debian Janitor ]
+  * Bump debhelper from old 11 to 12.
+  * Set debhelper-compat version in Build-Depends.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit.
+  * Rely on pre-initialized dpkg-architecture variables.
+  * Update standards version to 4.4.1, no changes needed.
+
+  [ Martina Ferrari ]
+  * Reformat defaults file. Closes: #953650
+  * Add Pre-Depends as requested by lintian.
+
+ -- Martina Ferrari <tina@debian.org>  Thu, 18 Jun 2020 21:57:31 +0000
 
 prometheus-node-exporter (0.18.1+ds-2) unstable; urgency=medium
 
