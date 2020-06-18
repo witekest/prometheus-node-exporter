@@ -30,6 +30,7 @@ XS-Go-Import-Path: github.com/prometheus/node_exporter
 
 Package: prometheus-node-exporter
 Architecture: any
+Pre-Depends: ${misc:Pre-Depends}
 Depends: daemon | systemd-sysv,
          ${misc:Depends},
          ${shlibs:Depends},
